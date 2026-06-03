@@ -533,7 +533,13 @@ function renderClusters(results) {
     const icon = APPLIANCE_ICONS[r.name] || '🔌';
     const conf = CONFIDENCE_MAP[r.name];
     const cc   = confColor[conf];
-    const monthlyKwh = (parseFloat(r.avgP) * (parseFloat(r.pct)/100) * 24 * 30 / 1000).toFixed(1);
+    // hoursPerDay: estimated daily usage per appliance type
+    const hoursMap = {
+      "Incandescent Lamp": 5, "LED Lamp": 6,
+      "Fan": 4, "Laptop": 5, "Fryer": 1
+    };
+    const hoursPerDay = hoursMap[r.name] || 4;
+    const monthlyKwh  = (parseFloat(r.avgP) * hoursPerDay * 30 / 1000).toFixed(2);
     const monthlyCost = Math.round(parseFloat(monthlyKwh) * 4.17);
     return `
     <div class="cluster-item">
