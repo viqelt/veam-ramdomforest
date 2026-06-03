@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>VEAM — K-Means NILM Engine</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #080c14;
+    --surface: #0d1420;
+    --surface2: #111827;
+    --border: #1e2d45;
+    --cyan: #00d4ff;
+    --cyan2: #0099cc;
+    --green: #00e5a0;
+    --amber: #ffb347;
+    --red: #ff5f6d;
+    --purple: #a78bfa;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --mono: 'Space Mono', monospace;
+    --sans: 'DM Sans', sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--sans); min-height: 100vh; }
+
+  /* ── grid noise bg ── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0; z-index: 0;
+    background-image:
+      linear-gradient(rgba(0,212,255,.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,255,.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+  }
+
+  .wrap { position: relative; z-index: 1; max-width: 860px; margin: 0 auto; padding: 24px 16px 60px; }
+
+  /* ── header ── */
+  header { text-align: center; padding: 40px 0 32px; }
+  .logo-row { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 8px; }
+  .logo-icon { width: 44px; height: 44px; border-radius: 12px;
+    background: linear-gradient(135deg, var(--cyan), var(--cyan2));
+    display: flex; align-items: center; justify-content: center; font-size: 22px; }
+  h1 { font-family: var(--mono); font-size: 28px; font-weight: 700; color: var(--cyan); letter-spacing: -0.5px; }
+  .subtitle { font-size: 13px; color: var(--muted); margin-top: 4px; }
+  .badge-row { display: flex; gap: 8px; justify-content: center; margin-top: 14px; flex-wrap: wrap; }
+  .badge { font-family: var(--mono); font-size: 10px; padding: 4px 10px; border-radius: 20px; border: 1px solid; font-weight: 700; letter-spacing: .5px; }
+  .badge-cyan  { border-color: var(--cyan);   color: var(--cyan);   background: rgba(0,212,255,.08); }
+  .badge-green { border-color: var(--green);  color: var(--green);  background: rgba(0,229,160,.08); }
+  .badge-amber { border-color: var(--amber);  color: var(--amber);  background: rgba(255,179,71,.08); }
+
+  /* ── comparison banner ── */
+  .compare-banner {
+    display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+    padding: 16px 20px; margin-bottom: 24px;
+  }
+  .compare-col { text-align: center; }
+  .compare-col .label { font-size: 10px; font-family: var(--mono); color: var(--muted); letter-spacing: .5px; text-transform: uppercase; }
+  .compare-col .name  { font-size: 15px; font-weight: 600; margin-top: 4px; }
+  .compare-col .desc  { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .vs { font-family: var(--mono); font-size: 18px; font-weight: 700; color: var(--border); }
+  .name-groq  { color: var(--purple); }
+  .name-kmeans{ color: var(--cyan); }
+
+  /* ── card ── */
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; margin-bottom: 20px; }
+  .card-header { display: flex; align-items: center; gap: 12px; padding: 16px 20px 12px; border-bottom: 1px solid var(--border); }
+  .card-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+  .card-title { font-weight: 600; font-size: 14px; }
+  .card-sub   { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .card-badge { margin-left: auto; font-family: var(--mono); font-size: 10px; padding: 3px 8px; border-radius: 20px; font-weight: 700; }
+  .card-body  { padding: 16px 20px; }
+
+  /* ── sheet input ── */
+  .input-row { display: flex; gap: 8px; }
+  .input-row input {
+    flex: 1; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px;
+    color: var(--text); font-family: var(--mono); font-size: 12px; padding: 10px 14px;
+    outline: none; transition: border-color .2s;
+  }
+  .input-row input:focus { border-color: var(--cyan); }
+  .btn {
+    padding: 10px 18px; border-radius: 10px; border: none; cursor: pointer;
+    font-family: var(--mono); font-size: 12px; font-weight: 700; letter-spacing: .3px;
+    transition: all .2s; white-space: nowrap;
+  }
+  .btn-primary { background: linear-gradient(135deg, var(--cyan), var(--cyan2)); color: #000; }
+  .btn-primary:hover { opacity: .85; transform: translateY(-1px); }
+  .btn-primary:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+  .btn-ghost { background: var(--surface2); border: 1px solid var(--border); color: var(--cyan); }
+  .btn-ghost:hover { border-color: var(--cyan); }
+
+  /* ── stats grid ── */
+  .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 14px; }
+  .stat-box { background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 12px; text-align: center; }
+  .stat-val { font-family: var(--mono); font-size: 20px; font-weight: 700; color: var(--cyan); }
+  .stat-lbl { font-size: 10px; color: var(--muted); margin-top: 3px; }
+
+  /* ── cluster cards ── */
+  .cluster-list { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
+  .cluster-item { background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; }
+  .cluster-top  { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .cluster-dot  { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .cluster-name { font-weight: 600; font-size: 13px; flex: 1; }
+  .conf-badge   { font-family: var(--mono); font-size: 10px; padding: 2px 8px; border-radius: 20px; font-weight: 700; }
+  .cluster-metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .metric-box { background: var(--bg); border-radius: 8px; padding: 7px; text-align: center; }
+  .metric-val { font-family: var(--mono); font-size: 12px; font-weight: 700; }
+  .metric-lbl { font-size: 9px; color: var(--muted); margin-top: 1px; }
+  .cluster-bar-wrap { margin-top: 8px; }
+  .cluster-bar-bg   { background: var(--border); border-radius: 4px; height: 5px; overflow: hidden; }
+  .cluster-bar-fill { height: 100%; border-radius: 4px; transition: width 1s cubic-bezier(.4,0,.2,1); }
+  .cluster-pct { font-size: 10px; color: var(--muted); margin-top: 3px; text-align: right; }
+
+  /* ── comparison table ── */
+  .comp-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .comp-table th { font-family: var(--mono); font-size: 10px; color: var(--muted); text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); }
+  .comp-table td { padding: 10px 10px; border-bottom: 1px solid rgba(30,45,69,.5); vertical-align: middle; }
+  .comp-table tr:last-child td { border: none; }
+  .comp-table tr:hover td { background: rgba(0,212,255,.03); }
+  .td-label { color: var(--muted); font-size: 11px; }
+  .td-groq  { color: var(--purple); font-weight: 500; }
+  .td-km    { color: var(--cyan);   font-weight: 500; }
+  .win-badge { font-size: 9px; padding: 2px 6px; border-radius: 10px; font-family: var(--mono); margin-left: 6px; font-weight: 700; }
+
+  /* ── log ── */
+  .log-box { background: var(--bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 12px 14px; font-family: var(--mono); font-size: 11px; color: var(--muted);
+    min-height: 48px; max-height: 120px; overflow-y: auto; line-height: 1.7; }
+  .log-line-ok   { color: var(--green); }
+  .log-line-info { color: var(--cyan); }
+  .log-line-warn { color: var(--amber); }
+
+  /* ── spinner ── */
+  .spinner { display: inline-block; width: 14px; height: 14px;
+    border: 2px solid var(--border); border-top-color: var(--cyan); border-radius: 50%;
+    animation: spin .7s linear infinite; vertical-align: middle; margin-right: 6px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── empty state ── */
+  .empty { text-align: center; padding: 32px; color: var(--muted); font-size: 13px; }
+  .empty-icon { font-size: 36px; margin-bottom: 10px; opacity: .4; }
+
+  /* ── accuracy bar ── */
+  .acc-row { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+  .acc-label { font-size: 11px; color: var(--muted); width: 120px; flex-shrink: 0; font-family: var(--mono); }
+  .acc-bar-bg { flex: 1; background: var(--border); border-radius: 4px; height: 8px; overflow: hidden; }
+  .acc-bar-fill { height: 100%; border-radius: 4px; }
+  .acc-pct { font-family: var(--mono); font-size: 11px; font-weight: 700; width: 42px; text-align: right; }
+
+  /* responsive */
+  @media(max-width:540px){
+    .stats-grid { grid-template-columns: repeat(2,1fr); }
+    .cluster-metrics { grid-template-columns: repeat(3,1fr); }
+    .compare-banner { grid-template-columns: 1fr; }
+    .vs { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- HEADER -->
+  <header>
+    <div class="logo-row">
+      <div class="logo-icon">⚡</div>
+      <h1>VEAM</h1>
+    </div>
+    <p class="subtitle">K-Means NILM Engine — Classical ML vs Groq AI</p>
+    <div class="badge-row">
+      <span class="badge badge-cyan">K-MEANS</span>
+      <span class="badge badge-green">NILM-INSPIRED</span>
+      <span class="badge badge-amber">DSUAL DATASET</span>
+    </div>
+  </header>
+
+  <!-- COMPARISON BANNER -->
+  <div class="compare-banner">
+    <div class="compare-col">
+      <div class="label">Method A</div>
+      <div class="name name-groq">Groq AI</div>
+      <div class="desc">LLaMA 3.3 70B · LLM Inference</div>
+    </div>
+    <div class="vs">VS</div>
+    <div class="compare-col">
+      <div class="label">Method B</div>
+      <div class="name name-kmeans">K-Means ML</div>
+      <div class="desc">Classical ML · No API needed</div>
+    </div>
+  </div>
+
+  <!-- STEP 1: GOOGLE SHEETS INPUT -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-icon" style="background:rgba(0,212,255,.12);">📊</div>
+      <div>
+        <div class="card-title">Google Sheets Data Source</div>
+        <div class="card-sub">Same data feed as VEAM dashboard</div>
+      </div>
+      <span class="card-badge badge-cyan">LIVE DATA</span>
+    </div>
+    <div class="card-body">
+      <div class="input-row">
+        <input id="sheetId" type="text"
+          placeholder="Google Sheet ID (e.g. 1g9XRplcjctpLaOnxmsy7C_0o8dc9Yy4-Zny6m7XSyXg)"
+          value="1g9XRplcjctpLaOnxmsy7C_0o8dc9Yy4-Zny6m7XSyXg" />
+        <button class="btn btn-primary" id="loadBtn" onclick="loadSheet()">Load →</button>
+      </div>
+      <div class="log-box" id="logBox" style="margin-top:12px;">
+        <span style="color:var(--muted);">// Waiting for data...</span>
+      </div>
+      <div id="statsArea" style="display:none;">
+        <div class="stats-grid">
+          <div class="stat-box"><div class="stat-val" id="s-rows">—</div><div class="stat-lbl">Readings</div></div>
+          <div class="stat-box"><div class="stat-val" id="s-power">—</div><div class="stat-lbl">Avg Power (W)</div></div>
+          <div class="stat-box"><div class="stat-val" id="s-pf">—</div><div class="stat-lbl">Avg Power Factor</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 2: K-MEANS ANALYSIS -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-icon" style="background:rgba(0,229,160,.12);">🧠</div>
+      <div>
+        <div class="card-title">K-Means Appliance Detection</div>
+        <div class="card-sub">Cluster centers trained on DSUAL dataset (Almeria Univ.)</div>
+      </div>
+      <span class="card-badge" style="background:rgba(0,229,160,.1);color:var(--green);border:1px solid var(--green);">ML ENGINE</span>
+    </div>
+    <div class="card-body">
+      <div style="display:flex;gap:8px;margin-bottom:14px;">
+        <button class="btn btn-primary" id="analyzeBtn" onclick="runKMeans()" disabled>
+          ⚡ Run K-Means Analysis
+        </button>
+        <button class="btn btn-ghost" onclick="showInfo()" title="About K-Means">ℹ Info</button>
+      </div>
+      <div id="infoBox" style="display:none;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:12px;font-size:12px;color:var(--muted);line-height:1.6;">
+        <strong style="color:var(--cyan);">How it works:</strong><br>
+        K-Means was trained on the DSUAL dataset (Almeria University, Spain) — 6 OZM smart meters recording
+        voltage, current, power, power factor and frequency every ~1 second.<br><br>
+        <strong>Cluster centers</strong> (power signatures) learned during training are compared to your
+        live Google Sheets data. Each reading is assigned to the nearest cluster = appliance detection.<br><br>
+        <strong>Features:</strong> active_power · current · pf · apparent_power · reactive_power · power_range
+      </div>
+      <div id="clustersArea">
+        <div class="empty"><div class="empty-icon">🔍</div>Load your data first, then click "Run K-Means Analysis"</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 3: COMPARISON TABLE -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-icon" style="background:rgba(167,139,250,.12);">⚖️</div>
+      <div>
+        <div class="card-title">Groq AI vs K-Means — Comparison</div>
+        <div class="card-sub">Academic evaluation for VEAM graduation project</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <table class="comp-table">
+        <thead>
+          <tr>
+            <th>Criterion</th>
+            <th style="color:var(--purple);">Groq AI</th>
+            <th style="color:var(--cyan);">K-Means</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="td-label">Method Type</td>
+            <td class="td-groq">LLM (LLaMA 3.3 70B)</td>
+            <td class="td-km">Classical ML (Unsupervised)</td>
+          </tr>
+          <tr>
+            <td class="td-label">Accuracy</td>
+            <td class="td-groq">Not measurable <span class="win-badge" style="background:rgba(255,179,71,.15);color:var(--amber);">?</span></td>
+            <td class="td-km">63.49% measured <span class="win-badge" style="background:rgba(0,229,160,.15);color:var(--green);">✓</span></td>
+          </tr>
+          <tr>
+            <td class="td-label">Speed</td>
+            <td class="td-groq">~1–3 sec (API call)</td>
+            <td class="td-km">Instant (local JS)</td>
+          </tr>
+          <tr>
+            <td class="td-label">Internet Required</td>
+            <td class="td-groq">Yes (Groq API)</td>
+            <td class="td-km">No (runs offline) <span class="win-badge" style="background:rgba(0,229,160,.15);color:var(--green);">✓</span></td>
+          </tr>
+          <tr>
+            <td class="td-label">Explainability</td>
+            <td class="td-groq">Black box</td>
+            <td class="td-km">Transparent (cluster centers) <span class="win-badge" style="background:rgba(0,229,160,.15);color:var(--green);">✓</span></td>
+          </tr>
+          <tr>
+            <td class="td-label">Training Data</td>
+            <td class="td-groq">Unknown (pre-trained)</td>
+            <td class="td-km">DSUAL — Almeria Univ. <span class="win-badge" style="background:rgba(0,229,160,.15);color:var(--green);">✓</span></td>
+          </tr>
+          <tr>
+            <td class="td-label">Reproducibility</td>
+            <td class="td-groq">Non-deterministic</td>
+            <td class="td-km">Deterministic (seed=42) <span class="win-badge" style="background:rgba(0,229,160,.15);color:var(--green);">✓</span></td>
+          </tr>
+          <tr>
+            <td class="td-label">Cost</td>
+            <td class="td-groq">API credits</td>
+            <td class="td-km">Free <span class="win-badge" style="background:rgba(0,229,160,.15);color:var(--green);">✓</span></td>
+          </tr>
+          <tr>
+            <td class="td-label">Flexibility</td>
+            <td class="td-groq">Very high (any query) <span class="win-badge" style="background:rgba(167,139,250,.15);color:var(--purple);">✓</span></td>
+            <td class="td-km">Fixed appliance set</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- Accuracy bars -->
+      <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border);">
+        <div style="font-size:11px;font-family:var(--mono);color:var(--muted);margin-bottom:10px;">PERFORMANCE METRICS — K-Means (v2)</div>
+        <div class="acc-row">
+          <div class="acc-label">Overall Acc.</div>
+          <div class="acc-bar-bg"><div class="acc-bar-fill" style="width:63%;background:var(--cyan);"></div></div>
+          <div class="acc-pct" style="color:var(--cyan);">63.5%</div>
+        </div>
+        <div class="acc-row">
+          <div class="acc-label">Laptop</div>
+          <div class="acc-bar-bg"><div class="acc-bar-fill" style="width:89%;background:var(--green);"></div></div>
+          <div class="acc-pct" style="color:var(--green);">89%</div>
+        </div>
+        <div class="acc-row">
+          <div class="acc-label">Inc. Lamp</div>
+          <div class="acc-bar-bg"><div class="acc-bar-fill" style="width:72%;background:var(--cyan);"></div></div>
+          <div class="acc-pct" style="color:var(--cyan);">72%</div>
+        </div>
+        <div class="acc-row">
+          <div class="acc-label">LED Lamp</div>
+          <div class="acc-bar-bg"><div class="acc-bar-fill" style="width:65%;background:var(--cyan);"></div></div>
+          <div class="acc-pct" style="color:var(--cyan);">65%</div>
+        </div>
+        <div class="acc-row">
+          <div class="acc-label">Fan</div>
+          <div class="acc-bar-bg"><div class="acc-bar-fill" style="width:56%;background:var(--amber);"></div></div>
+          <div class="acc-pct" style="color:var(--amber);">56%</div>
+        </div>
+        <div class="acc-row">
+          <div class="acc-label">Fryer</div>
+          <div class="acc-bar-bg"><div class="acc-bar-fill" style="width:7%;background:var(--red);"></div></div>
+          <div class="acc-pct" style="color:var(--red);">7%</div>
+        </div>
+        <div style="margin-top:10px;font-size:10px;color:var(--muted);">Silhouette Score: 0.454 · Trained on DSUAL dataset · SMOTE balanced · K=5</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div style="text-align:center;padding-top:16px;font-size:11px;color:var(--muted);">
+    <span style="font-family:var(--mono);">VEAM</span> · Master's Graduation Project ·
+    University of Souk Ahras · K-Means NILM Engine
+  </div>
+
+</div><!-- end wrap -->
+
+<script>
+// ─────────────────────────────────────────────────────────────
+// K-MEANS MODEL
+// Cluster centers trained on DSUAL (ualm2.h5) — Python sklearn
+// Features: [power, current, pf, apparent_power, reactive_power, power_range]
+// StandardScaler mean/std also embedded
+// ─────────────────────────────────────────────────────────────
+
+const SCALER_MEAN = [47.47, 0.245, 0.771, 62.35, 37.02, 6.54];
+const SCALER_STD  = [38.12, 0.188, 0.255, 48.60, 38.44, 14.82];
+
+// Cluster centers in ORIGINAL scale (after inverse_transform)
+const CLUSTER_CENTERS = [
+  { name: "LED Lamp",          power: 58.2,  current: 0.342, pf: 0.702, apparent: 82.8,  reactive: 58.0, color: "#a78bfa" },
+  { name: "Laptop",            power: 18.6,  current: 0.136, pf: 0.567, apparent: 33.2,  reactive: 27.5, color: "#00e5a0" },
+  { name: "Fan",               power: 34.0,  current: 0.145, pf: 0.971, apparent: 35.3,  reactive: 8.0,  color: "#00d4ff" },
+  { name: "Fryer",             power: 38.9,  current: 0.221, pf: 0.734, apparent: 53.7,  reactive: 34.2, color: "#ffb347" },
+  { name: "Incandescent Lamp", power: 98.7,  current: 0.458, pf: 0.888, apparent: 110.9, reactive: 49.4, color: "#ff5f6d" },
+];
+
+const APPLIANCE_ICONS = {
+  "LED Lamp": "💡", "Laptop": "💻", "Fan": "🌀",
+  "Fryer": "🍳", "Incandescent Lamp": "🔆"
+};
+
+const CONFIDENCE_MAP = {
+  "LED Lamp": "Medium", "Laptop": "High", "Fan": "High",
+  "Fryer": "Low", "Incandescent Lamp": "High"
+};
+
+function scale(features) {
+  return features.map((v, i) => (v - SCALER_MEAN[i]) / SCALER_STD[i]);
+}
+
+function euclidean(a, b) {
+  return Math.sqrt(a.reduce((s, v, i) => s + (v - b[i]) ** 2, 0));
+}
+
+function predictCluster(row) {
+  // row: {power, current, pf, apparent_power, reactive_power, power_range}
+  const feat = scale([
+    row.power, row.current, row.pf,
+    row.apparent_power, row.reactive_power, row.power_range || 0
+  ]);
+  // scale cluster centers too
+  let bestCluster = 0, bestDist = Infinity;
+  CLUSTER_CENTERS.forEach((c, i) => {
+    const cf = scale([c.power, c.current, c.pf, c.apparent, c.reactive, 0]);
+    const d = euclidean(feat, cf);
+    if (d < bestDist) { bestDist = d; bestCluster = i; }
+  });
+  return bestCluster;
+}
+
+// ─────────────────────────────────────────────────────────────
+// GOOGLE SHEETS LOADER
+// ─────────────────────────────────────────────────────────────
+let rawRows = [];
+
+function log(msg, type = 'info') {
+  const box = document.getElementById('logBox');
+  const line = document.createElement('div');
+  line.className = `log-line-${type}`;
+  line.textContent = '> ' + msg;
+  box.innerHTML = '';
+  box.appendChild(line);
+}
+
+async function loadSheet() {
+  const id = document.getElementById('sheetId').value.trim();
+  if (!id) { log('Enter a Sheet ID first', 'warn'); return; }
+
+  const btn = document.getElementById('loadBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Loading...';
+  log('Connecting to Google Sheets...', 'info');
+
+  const url = `https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv`;
+
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('Sheet not accessible (make sure it is public)');
+    const text = await res.text();
+    const lines = text.trim().split('\n').filter(l => l.trim());
+    if (lines.length < 2) throw new Error('Sheet appears empty');
+
+    // Parse CSV — skip header row
+    rawRows = [];
+    for (let i = 1; i < lines.length; i++) {
+      const cols = lines[i].split(',').map(c => c.replace(/"/g, '').trim());
+      const voltage     = parseFloat(cols[1]) || parseFloat(cols[0]);
+      const current     = parseFloat(cols[2]);
+      const power       = parseFloat(cols[3]);
+      const pf          = parseFloat(cols[5]) || parseFloat(cols[4]);
+      if (isNaN(power) || isNaN(pf)) continue;
+      const apparent    = voltage * current;
+      const reactive    = Math.sqrt(Math.max(apparent**2 - power**2, 0));
+      rawRows.push({ voltage, current, power, pf, apparent_power: apparent, reactive_power: reactive });
+    }
+
+    if (rawRows.length === 0) throw new Error('Could not parse rows — check column format');
+
+    // Stats
+    const avgPower = rawRows.reduce((s,r)=>s+r.power,0) / rawRows.length;
+    const avgPF    = rawRows.reduce((s,r)=>s+r.pf,0)    / rawRows.length;
+    document.getElementById('s-rows').textContent  = rawRows.length;
+    document.getElementById('s-power').textContent = avgPower.toFixed(1);
+    document.getElementById('s-pf').textContent    = avgPF.toFixed(3);
+    document.getElementById('statsArea').style.display = 'block';
+
+    log(`✓ Loaded ${rawRows.length} readings — ready for K-Means`, 'ok');
+    document.getElementById('analyzeBtn').disabled = false;
+
+  } catch(e) {
+    log('Error: ' + e.message, 'warn');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = 'Load →';
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// K-MEANS ANALYSIS
+// ─────────────────────────────────────────────────────────────
+function runKMeans() {
+  if (!rawRows.length) { log('Load data first', 'warn'); return; }
+
+  const btn = document.getElementById('analyzeBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Analyzing...';
+
+  setTimeout(() => {
+    // Assign each row to a cluster
+    const counts    = new Array(5).fill(0);
+    const powerSums = new Array(5).fill(0);
+
+    rawRows.forEach(row => {
+      const c = predictCluster(row);
+      counts[c]++;
+      powerSums[c] += row.power;
+    });
+
+    const total = rawRows.length;
+    const results = CLUSTER_CENTERS.map((c, i) => ({
+      ...c,
+      count: counts[i],
+      pct:   (counts[i] / total * 100).toFixed(1),
+      avgP:  counts[i] > 0 ? (powerSums[i] / counts[i]).toFixed(1) : '0',
+    })).sort((a, b) => b.count - a.count);
+
+    renderClusters(results);
+    log(`✓ K-Means complete — ${total} readings classified into 5 appliance clusters`, 'ok');
+
+    btn.disabled = false;
+    btn.innerHTML = '⚡ Re-run Analysis';
+  }, 80);
+}
+
+function renderClusters(results) {
+  const area = document.getElementById('clustersArea');
+  const confColor = { High: 'var(--green)', Medium: 'var(--amber)', Low: 'var(--red)' };
+
+  area.innerHTML = `<div class="cluster-list">${results.map(r => {
+    const icon = APPLIANCE_ICONS[r.name] || '🔌';
+    const conf = CONFIDENCE_MAP[r.name];
+    const cc   = confColor[conf];
+    const monthlyKwh = (parseFloat(r.avgP) * (parseFloat(r.pct)/100) * 24 * 30 / 1000).toFixed(1);
+    const monthlyCost = Math.round(parseFloat(monthlyKwh) * 4.17);
+    return `
+    <div class="cluster-item">
+      <div class="cluster-top">
+        <div class="cluster-dot" style="background:${r.color};"></div>
+        <span style="font-size:16px;">${icon}</span>
+        <span class="cluster-name">${r.name}</span>
+        <span class="conf-badge" style="background:${cc}18;color:${cc};border:1px solid ${cc};">${conf}</span>
+        <span style="font-family:var(--mono);font-size:11px;color:var(--muted);margin-left:auto;">${r.count} readings</span>
+      </div>
+      <div class="cluster-metrics">
+        <div class="metric-box">
+          <div class="metric-val" style="color:${r.color};">${r.avgP} W</div>
+          <div class="metric-lbl">Avg Power</div>
+        </div>
+        <div class="metric-box">
+          <div class="metric-val" style="color:var(--cyan);">${monthlyKwh} kWh</div>
+          <div class="metric-lbl">Monthly Est.</div>
+        </div>
+        <div class="metric-box">
+          <div class="metric-val" style="color:var(--green);">~${monthlyCost} DA</div>
+          <div class="metric-lbl">Est. Cost</div>
+        </div>
+      </div>
+      <div class="cluster-bar-wrap">
+        <div class="cluster-bar-bg">
+          <div class="cluster-bar-fill" style="width:0%;background:${r.color};" data-target="${r.pct}"></div>
+        </div>
+        <div class="cluster-pct">${r.pct}% of readings</div>
+      </div>
+    </div>`;
+  }).join('')}</div>`;
+
+  // Animate bars
+  requestAnimationFrame(() => {
+    document.querySelectorAll('.cluster-bar-fill').forEach(el => {
+      el.style.width = el.dataset.target + '%';
+    });
+  });
+}
+
+function showInfo() {
+  const box = document.getElementById('infoBox');
+  box.style.display = box.style.display === 'none' ? 'block' : 'none';
+}
+
+// Auto-load on page ready
+window.addEventListener('load', () => {
+  const id = document.getElementById('sheetId').value.trim();
+  if (id) loadSheet();
+});
+</script>
+</body>
+</html>
