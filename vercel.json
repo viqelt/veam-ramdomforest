@@ -1,4 +1,5 @@
 {
+  "outputDirectory": ".",
   "functions": {
     "api/gemini.ts": {
       "maxDuration": 30
