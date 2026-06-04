@@ -1,6 +1,6 @@
 # veam-Random forest 
 link:
-viqelt.github.io/veam-ramdomforest/
+https://viqelt.github.io/veam-ramdomforest/
 
 
 link 2:
