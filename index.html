@@ -72,7 +72,7 @@ h1{font-family:var(--mono);font-size:26px;font-weight:700;color:var(--cyan);}
 .stat-lbl{font-size:10px;color:var(--muted);margin-top:3px;}
 
 /* appliance cards */
-.app-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:4px;}
+.app-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:12px;}
 .app-card{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px 14px;}
 .app-top{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
 .app-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
@@ -86,8 +86,18 @@ h1{font-family:var(--mono);font-size:26px;font-weight:700;color:var(--cyan);}
 .bar-fill{height:100%;border-radius:4px;transition:width 1s cubic-bezier(.4,0,.2,1);}
 .bar-pct{font-size:10px;color:var(--muted);margin-top:3px;text-align:right;}
 
-/* conf badge */
-.conf{font-family:var(--mono);font-size:9px;padding:2px 7px;border-radius:20px;font-weight:700;}
+/* PROGRESS */
+.progress-wrap{margin-top:14px;display:none;}
+.progress-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+.progress-label{font-family:var(--mono);font-size:11px;color:var(--cyan);}
+.progress-eta{font-family:var(--mono);font-size:11px;color:var(--muted);}
+.progress-bg{background:var(--border);border-radius:6px;height:10px;overflow:hidden;}
+.progress-fill{height:100%;border-radius:6px;background:linear-gradient(90deg,var(--cyan),var(--green));
+  transition:width .3s ease;width:0%;}
+.progress-steps{display:flex;justify-content:space-between;margin-top:6px;}
+.progress-step{font-size:10px;color:var(--muted);font-family:var(--mono);}
+.progress-step.done{color:var(--green);}
+.progress-step.active{color:var(--cyan);}
 
 /* buttons */
 .btn{padding:10px 20px;border-radius:10px;border:none;cursor:pointer;
@@ -147,11 +157,14 @@ h1{font-family:var(--mono);font-size:26px;font-weight:700;color:var(--cyan);}
   padding:8px 10px;border-bottom:1px solid var(--border);}
 .comp-tbl td{padding:10px 10px;border-bottom:1px solid rgba(30,45,69,.5);vertical-align:middle;}
 .comp-tbl tr:last-child td{border:none;}
-.comp-tbl tr:hover td{background:rgba(0,212,255,.03);}
+.comp-tbl tr:hover td{background:rgba(255,255,255,.02);}
 .td-m{color:var(--muted);font-size:11px;}
 .td-rf{color:var(--green);font-weight:500;}
 .td-gr{color:var(--purple);font-weight:500;}
-.win{font-size:9px;padding:2px 6px;border-radius:10px;font-family:var(--mono);margin-left:6px;font-weight:700;}
+.win-g{font-size:9px;padding:2px 6px;border-radius:10px;font-family:var(--mono);margin-left:5px;font-weight:700;
+  background:rgba(0,229,160,.12);color:var(--green);border:1px solid var(--green);}
+.win-p{font-size:9px;padding:2px 6px;border-radius:10px;font-family:var(--mono);margin-left:5px;font-weight:700;
+  background:rgba(167,139,250,.12);color:var(--purple);border:1px solid var(--purple);}
 
 /* winner */
 .winner{border-radius:14px;padding:16px 20px;text-align:center;margin-top:20px;border:1px solid;}
@@ -167,6 +180,9 @@ h1{font-family:var(--mono);font-size:26px;font-weight:700;color:var(--cyan);}
 .groq-raw{background:var(--bg);border:1px solid var(--border);border-radius:10px;
   padding:12px 14px;font-size:12px;color:var(--text);line-height:1.7;
   margin-top:12px;white-space:pre-wrap;word-break:break-word;max-height:200px;overflow-y:auto;}
+
+/* conf */
+.conf{font-family:var(--mono);font-size:9px;padding:2px 7px;border-radius:20px;font-weight:700;}
 
 @media(max-width:600px){
   .stats-grid{grid-template-columns:repeat(2,1fr);}
@@ -187,7 +203,7 @@ h1{font-family:var(--mono);font-size:26px;font-weight:700;color:var(--cyan);}
     <div class="logo-icon">⚡</div>
     <h1>VEAM</h1>
   </div>
-  <p class="subtitle">NILM Engine — Random Forest vs Groq AI (LLaMA 3.3 70B) · DSUAL Dataset</p>
+  <p class="subtitle">NILM Comparison — Random Forest vs Groq AI (LLaMA 3.3 70B) · DSUAL Dataset</p>
   <div class="badge-row">
     <span class="badge bg">RANDOM FOREST</span>
     <span class="badge bp">GROQ AI</span>
@@ -201,13 +217,13 @@ h1{font-family:var(--mono);font-size:26px;font-weight:700;color:var(--cyan);}
   <div class="vs-col">
     <div class="vs-lbl">Method A</div>
     <div class="vs-name" style="color:var(--green);">Random Forest</div>
-    <div class="vs-desc">Supervised ML · 100 Trees · Sklearn</div>
+    <div class="vs-desc">Supervised ML · 100 Trees · Local</div>
   </div>
   <div class="vs-sep">VS</div>
   <div class="vs-col">
     <div class="vs-lbl">Method B</div>
     <div class="vs-name" style="color:var(--purple);">Groq AI</div>
-    <div class="vs-desc">LLaMA 3.3 70B · LLM · API</div>
+    <div class="vs-desc">LLaMA 3.3 70B · Generative AI · API</div>
   </div>
 </div>
 
@@ -215,53 +231,41 @@ h1{font-family:var(--mono);font-size:26px;font-weight:700;color:var(--cyan);}
 <div class="split-row">
   <div class="split-box s-train">
     <div class="split-pct">80%</div>
-    <div class="split-lbl">Training Set — Random Forest Trained Here</div>
+    <div class="split-lbl">Training Set — Random Forest learns here</div>
   </div>
   <div class="split-box s-test">
     <div class="split-pct">20%</div>
-    <div class="split-lbl">Test Set — Both Methods Evaluated Here</div>
+    <div class="split-lbl">Test Set — Both methods evaluated here</div>
   </div>
 </div>
 
-<!-- STEP 1: DATASET INFO -->
+<!-- DATASET CARD -->
 <div class="card">
   <div class="card-header">
     <div class="card-icon" style="background:rgba(0,212,255,.12);">📊</div>
     <div>
-      <div class="card-title">DSUAL Dataset — Real Data</div>
-      <div class="card-sub">University of Almeria · 5 appliances · 23,855 readings · ESP32 + PZEM-004T</div>
+      <div class="card-title">DSUAL Dataset — Real Measurements</div>
+      <div class="card-sub">University of Almeria · 5 appliances · 23,855 readings</div>
     </div>
     <span class="step-badge bc">DATASET</span>
   </div>
   <div class="card-body">
     <div class="stats-grid">
-      <div class="stat-box">
-        <div class="stat-val">23,855</div>
-        <div class="stat-lbl">Total Readings</div>
-      </div>
-      <div class="stat-box">
-        <div class="stat-val" style="color:var(--green);">19,084</div>
-        <div class="stat-lbl">Train (80%)</div>
-      </div>
-      <div class="stat-box">
-        <div class="stat-val" style="color:var(--purple);">4,771</div>
-        <div class="stat-lbl">Test (20%)</div>
-      </div>
-      <div class="stat-box">
-        <div class="stat-val" style="color:var(--amber);">5</div>
-        <div class="stat-lbl">Appliances</div>
-      </div>
+      <div class="stat-box"><div class="stat-val">23,855</div><div class="stat-lbl">Total Readings</div></div>
+      <div class="stat-box"><div class="stat-val" style="color:var(--green);">19,084</div><div class="stat-lbl">Train (80%)</div></div>
+      <div class="stat-box"><div class="stat-val" style="color:var(--purple);">4,771</div><div class="stat-lbl">Test (20%)</div></div>
+      <div class="stat-box"><div class="stat-val" style="color:var(--amber);">5</div><div class="stat-lbl">Appliances</div></div>
     </div>
   </div>
 </div>
 
-<!-- STEP 2: RANDOM FOREST -->
+<!-- RANDOM FOREST CARD -->
 <div class="card">
   <div class="card-header">
     <div class="card-icon" style="background:rgba(0,229,160,.12);">🌲</div>
     <div>
       <div class="card-title">Random Forest Classifier</div>
-      <div class="card-sub">100 trees · stratified 80/20 · seed=42 · DSUAL dataset</div>
+      <div class="card-sub">100 trees · stratified 80/20 · seed=42 · runs in browser</div>
     </div>
     <span class="step-badge bg">STEP 1</span>
   </div>
@@ -269,27 +273,47 @@ h1{font-family:var(--mono);font-size:26px;font-weight:700;color:var(--cyan);}
     <div class="btn-row">
       <button class="btn btn-cyan" id="rfBtn" onclick="runRandomForest()">🌲 Run Random Forest</button>
     </div>
-    <div class="log" id="rfLog">// Ready — click to run Random Forest on 23,855 real readings</div>
+
+    <!-- PROGRESS BAR -->
+    <div class="progress-wrap" id="progressWrap">
+      <div class="progress-header">
+        <span class="progress-label" id="progressLabel">Preparing data...</span>
+        <span class="progress-eta" id="progressEta"></span>
+      </div>
+      <div class="progress-bg">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+      <div class="progress-steps">
+        <span class="progress-step" id="ps0">Bootstrap</span>
+        <span class="progress-step" id="ps1">Trees 1-25</span>
+        <span class="progress-step" id="ps2">Trees 26-50</span>
+        <span class="progress-step" id="ps3">Trees 51-75</span>
+        <span class="progress-step" id="ps4">Trees 76-100</span>
+        <span class="progress-step" id="ps5">Evaluate</span>
+      </div>
+    </div>
+
+    <div class="log" id="rfLog">// Ready — click to train Random Forest on 23,855 real DSUAL readings</div>
     <div id="rfResults">
       <div class="empty"><div class="empty-icon">🌲</div>Click "Run Random Forest" to start</div>
     </div>
   </div>
 </div>
 
-<!-- STEP 3: GROQ AI -->
+<!-- GROQ AI CARD -->
 <div class="card">
   <div class="card-header">
     <div class="card-icon" style="background:rgba(167,139,250,.12);">🤖</div>
     <div>
       <div class="card-title">Groq AI Classification</div>
-      <div class="card-sub">LLaMA 3.3 70B · Analyzes the 20% test set via API</div>
+      <div class="card-sub">LLaMA 3.3 70B · Analyzes 4,771 test readings via API</div>
     </div>
     <span class="step-badge bp">STEP 2</span>
   </div>
   <div class="card-body">
     <p style="font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.6;">
       Sends a statistical summary of the <strong style="color:var(--purple);">4,771 test readings</strong>
-      to Groq AI. The AI identifies appliances from power signatures — without any training.
+      to Groq AI. The model identifies appliances from power signatures without any prior training on this dataset.
     </p>
     <button class="btn btn-purple" id="groqBtn" onclick="runGroqAI()" disabled>🤖 Run Groq AI Analysis</button>
     <div class="log" id="groqLog">// Run Random Forest first, then Groq AI...</div>
@@ -297,23 +321,23 @@ h1{font-family:var(--mono);font-size:26px;font-weight:700;color:var(--cyan);}
   </div>
 </div>
 
-<!-- STEP 4: SIDE BY SIDE -->
+<!-- SIDE BY SIDE -->
 <div class="card" id="sbsCard" style="display:none;">
   <div class="card-header">
     <div class="card-icon" style="background:rgba(255,179,71,.12);">⚖️</div>
     <div>
-      <div class="card-title">Test Set — Side by Side Comparison</div>
-      <div class="card-sub">4,771 test readings · Random Forest vs Groq AI</div>
+      <div class="card-title">Test Set — Side by Side</div>
+      <div class="card-sub">4,771 readings · Random Forest predictions vs Groq AI estimates</div>
     </div>
   </div>
   <div class="card-body">
     <div class="sbs-grid">
       <div class="sbs-panel">
-        <div class="sbs-title" style="color:var(--green);">🌲 Random Forest Results</div>
+        <div class="sbs-title" style="color:var(--green);">🌲 Random Forest</div>
         <div id="rfSbs"></div>
       </div>
       <div class="sbs-panel">
-        <div class="sbs-title" style="color:var(--purple);">🤖 Groq AI Results</div>
+        <div class="sbs-title" style="color:var(--purple);">🤖 Groq AI</div>
         <div id="groqSbs"></div>
       </div>
     </div>
@@ -327,7 +351,7 @@ h1{font-family:var(--mono);font-size:26px;font-weight:700;color:var(--cyan);}
     <div class="card-icon" style="background:rgba(255,179,71,.12);">📋</div>
     <div>
       <div class="card-title">Academic Comparison — Random Forest vs Groq AI</div>
-      <div class="card-sub">Evaluation criteria · Universite de Souk Ahras · PFE 2025-2026</div>
+      <div class="card-sub">Objective evaluation · Universite de Souk Ahras · PFE 2025-2026</div>
     </div>
   </div>
   <div class="card-body">
@@ -342,66 +366,82 @@ h1{font-family:var(--mono);font-size:26px;font-weight:700;color:var(--cyan);}
       <tbody>
         <tr>
           <td class="td-m">Method Type</td>
-          <td class="td-rf">Supervised ML — Ensemble<span class="win" style="background:rgba(0,229,160,.15);color:var(--green);">✓</span></td>
-          <td class="td-gr">LLM — Generative AI</td>
+          <td class="td-rf">Supervised ML — Ensemble</td>
+          <td class="td-gr">Large Language Model (LLM)<span class="win-p">✓ Novel</span></td>
         </tr>
         <tr>
           <td class="td-m">Accuracy</td>
-          <td class="td-rf">~95%+ measurable<span class="win" style="background:rgba(0,229,160,.15);color:var(--green);">✓</span></td>
-          <td class="td-gr">Qualitative — not measurable</td>
+          <td class="td-rf">~95% — fully measurable<span class="win-g">✓ Quantifiable</span></td>
+          <td class="td-gr">Qualitative — no ground truth score</td>
+        </tr>
+        <tr>
+          <td class="td-m">Training Required</td>
+          <td class="td-rf">Yes — needs labeled data</td>
+          <td class="td-gr">No training needed<span class="win-p">✓ Zero-shot</span></td>
         </tr>
         <tr>
           <td class="td-m">Speed</td>
-          <td class="td-rf">Instant — local JS<span class="win" style="background:rgba(0,229,160,.15);color:var(--green);">✓</span></td>
+          <td class="td-rf">Fast after training — local<span class="win-g">✓ Offline</span></td>
           <td class="td-gr">1–3 sec API latency</td>
         </tr>
         <tr>
           <td class="td-m">Internet Required</td>
-          <td class="td-rf">No — offline capable<span class="win" style="background:rgba(0,229,160,.15);color:var(--green);">✓</span></td>
-          <td class="td-gr">Yes — Groq API</td>
+          <td class="td-rf">No — runs fully offline<span class="win-g">✓ Edge ready</span></td>
+          <td class="td-gr">Yes — Groq cloud API</td>
         </tr>
         <tr>
           <td class="td-m">Explainability</td>
-          <td class="td-rf">Feature importance scores<span class="win" style="background:rgba(0,229,160,.15);color:var(--green);">✓</span></td>
-          <td class="td-gr">Black box — no math trace</td>
-        </tr>
-        <tr>
-          <td class="td-m">Training Data</td>
-          <td class="td-rf">DSUAL — Almeria Univ.<span class="win" style="background:rgba(0,229,160,.15);color:var(--green);">✓</span></td>
-          <td class="td-gr">Unknown — pre-trained LLM</td>
-        </tr>
-        <tr>
-          <td class="td-m">Reproducibility</td>
-          <td class="td-rf">Deterministic seed=42<span class="win" style="background:rgba(0,229,160,.15);color:var(--green);">✓</span></td>
-          <td class="td-gr">Non-deterministic (temperature)</td>
-        </tr>
-        <tr>
-          <td class="td-m">Cost</td>
-          <td class="td-rf">Free — no API needed<span class="win" style="background:rgba(0,229,160,.15);color:var(--green);">✓</span></td>
-          <td class="td-gr">API credits required</td>
+          <td class="td-rf">Feature importance scores<span class="win-g">✓ Transparent</span></td>
+          <td class="td-gr">Natural language explanation<span class="win-p">✓ Human readable</span></td>
         </tr>
         <tr>
           <td class="td-m">Flexibility</td>
           <td class="td-rf">Fixed — trained appliances only</td>
-          <td class="td-gr">Any query — flexible<span class="win" style="background:rgba(167,139,250,.15);color:var(--purple);">✓</span></td>
+          <td class="td-gr">Any appliance — no retraining<span class="win-p">✓ Adaptable</span></td>
         </tr>
         <tr>
-          <td class="td-m">Deployment</td>
-          <td class="td-rf">Edge / embedded ready<span class="win" style="background:rgba(0,229,160,.15);color:var(--green);">✓</span></td>
-          <td class="td-gr">Cloud only</td>
+          <td class="td-m">Reproducibility</td>
+          <td class="td-rf">Deterministic — seed=42<span class="win-g">✓ Consistent</span></td>
+          <td class="td-gr">Probabilistic — varies per call</td>
         </tr>
         <tr>
-          <td class="td-m">Features Used</td>
-          <td class="td-rf">voltage, current, power, freq, PF<span class="win" style="background:rgba(0,229,160,.15);color:var(--green);">✓</span></td>
-          <td class="td-gr">Statistical summary only</td>
+          <td class="td-m">Cost</td>
+          <td class="td-rf">Free — open source<span class="win-g">✓ No cost</span></td>
+          <td class="td-gr">API credits required</td>
+        </tr>
+        <tr>
+          <td class="td-m">Scalability</td>
+          <td class="td-rf">Needs retraining for new devices</td>
+          <td class="td-gr">Scales instantly to new devices<span class="win-p">✓ Scalable</span></td>
+        </tr>
+        <tr>
+          <td class="td-m">Data Privacy</td>
+          <td class="td-rf">Data stays local<span class="win-g">✓ Private</span></td>
+          <td class="td-gr">Data sent to external API</td>
+        </tr>
+        <tr>
+          <td class="td-m">Best Use Case</td>
+          <td class="td-rf">Production NILM — known appliances</td>
+          <td class="td-gr">Exploration — unknown appliances<span class="win-p">✓ Research</span></td>
         </tr>
       </tbody>
     </table>
 
+    <div style="margin-top:16px;padding:12px 14px;background:var(--surface2);border-radius:10px;border:1px solid var(--border);">
+      <div style="font-size:11px;font-family:var(--mono);color:var(--muted);margin-bottom:6px;">CONCLUSION</div>
+      <p style="font-size:12px;line-height:1.7;color:var(--text);">
+        Both methods have distinct strengths. <strong style="color:var(--green);">Random Forest</strong> excels in accuracy,
+        reproducibility, and offline deployment — ideal for production NILM systems.
+        <strong style="color:var(--purple);">Groq AI</strong> offers zero-shot flexibility and natural language reasoning —
+        ideal for exploration and unknown appliances. The choice depends on the use case:
+        <em>precision vs flexibility</em>.
+      </p>
+    </div>
+
     <!-- RF accuracy bars -->
     <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border);">
       <div style="font-size:11px;font-family:var(--mono);color:var(--muted);margin-bottom:12px;">
-        RANDOM FOREST — Accuracy per Appliance (Python sklearn, DSUAL dataset)
+        RANDOM FOREST — Per-Appliance Accuracy (Python sklearn, DSUAL dataset)
       </div>
       <div class="acc-row">
         <div class="acc-lbl">Overall</div>
@@ -409,7 +449,7 @@ h1{font-family:var(--mono);font-size:26px;font-weight:700;color:var(--cyan);}
         <div class="acc-pct" style="color:var(--green);">~95%</div>
       </div>
       <div class="acc-row">
-        <div class="acc-lbl">Incandescent</div>
+        <div class="acc-lbl">Inc. Lamp</div>
         <div class="acc-bg"><div class="acc-fill" style="width:97%;background:var(--green);"></div></div>
         <div class="acc-pct" style="color:var(--green);">~97%</div>
       </div>
@@ -434,7 +474,7 @@ h1{font-family:var(--mono);font-size:26px;font-weight:700;color:var(--cyan);}
         <div class="acc-pct" style="color:var(--amber);">~92%</div>
       </div>
       <div style="margin-top:10px;font-size:10px;color:var(--muted);">
-        n_estimators=100 · random_state=42 · stratified split · Features: voltage, current, power_active, frequency, power_factor
+        n_estimators=100 · random_state=42 · stratified split · features: voltage, current, power_active, frequency, power_factor
       </div>
     </div>
   </div>
@@ -443,17 +483,14 @@ h1{font-family:var(--mono);font-size:26px;font-weight:700;color:var(--cyan);}
 <!-- FOOTER -->
 <div style="text-align:center;padding-top:16px;font-size:11px;color:var(--muted);">
   <span style="font-family:var(--mono);">VEAM</span> · Projet de Fin d'Etudes ·
-  Master Electrotechnique Industrielle · Universite de Souk Ahras · 2025–2026
+  Master Electrotechnique Industrielle · Universite de Souk Ahras · 2025-2026
 </div>
 
 </div><!-- wrap -->
 <script>
-// ═══════════════════════════════════════════════
-// RANDOM FOREST — JavaScript Implementation
-// Mirrors the Python sklearn RandomForestClassifier
-// Features: voltage_V, current_A, power_active_W, frequency_Hz, power_factor
-// ═══════════════════════════════════════════════
-
+// ═══════════════════════════════════════════
+// APPLIANCE META
+// ═══════════════════════════════════════════
 const APPLIANCE_INFO = {
   'Incandescent Lamp': { icon:'🔆', color:'#ff5f6d' },
   'LED Lamp':          { icon:'💡', color:'#a78bfa' },
@@ -462,261 +499,271 @@ const APPLIANCE_INFO = {
   'Fryer':             { icon:'🍳', color:'#ffb347' },
 };
 
-// ── Simple Decision Tree node ──
+// ═══════════════════════════════════════════
+// DECISION TREE
+// ═══════════════════════════════════════════
 class DTree {
   constructor(){ this.feat=null;this.thr=null;this.left=null;this.right=null;this.label=null; }
-  static train(X, y, depth=0, maxDepth=8, minSamples=5, rng){
-    const t = new DTree();
-    const classes = [...new Set(y)];
-    // leaf if pure or too small or max depth
-    if(classes.length===1||y.length<=minSamples||depth>=maxDepth){
-      const counts={};
-      y.forEach(c=>counts[c]=(counts[c]||0)+1);
-      t.label=Object.keys(counts).reduce((a,b)=>counts[a]>counts[b]?a:b);
+  static train(X,y,depth=0,maxD=8,minS=5,rng){
+    const t=new DTree();
+    const cls=[...new Set(y)];
+    if(cls.length===1||y.length<=minS||depth>=maxD){
+      const c={};y.forEach(v=>c[v]=(c[v]||0)+1);
+      t.label=Object.keys(c).reduce((a,b)=>c[a]>c[b]?a:b);
       return t;
     }
-    const nFeats = Math.round(Math.sqrt(X[0].length));
-    // random feature subset
-    const featIdxs=[];
+    const nF=Math.round(Math.sqrt(X[0].length));
     const allF=[...Array(X[0].length).keys()];
-    while(featIdxs.length<nFeats){
-      const f=allF[Math.floor(rng()*allF.length)];
-      if(!featIdxs.includes(f)) featIdxs.push(f);
-    }
-    let bestGini=Infinity,bestFeat=-1,bestThr=0,bestL=[],bestR=[],bestLy=[],bestRy=[];
-    for(const fi of featIdxs){
+    const fIdx=[];
+    while(fIdx.length<nF){const f=allF[Math.floor(rng()*allF.length)];if(!fIdx.includes(f))fIdx.push(f);}
+    let bG=Infinity,bF=-1,bT=0,bLX=[],bRX=[],bLy=[],bRy=[];
+    for(const fi of fIdx){
       const vals=[...new Set(X.map(r=>r[fi]))].sort((a,b)=>a-b);
-      const thrs=vals.slice(0,vals.length-1).map((v,i)=>(v+vals[i+1])/2);
-      for(const thr of thrs){
-        const Li=[],Ri=[],Ly=[],Ry=[];
-        X.forEach((r,i)=>{if(r[fi]<=thr){Li.push(r);Ly.push(y[i]);}else{Ri.push(r);Ry.push(y[i]);}});
-        if(!Li.length||!Ri.length) continue;
+      for(let vi=0;vi<vals.length-1;vi++){
+        const thr=(vals[vi]+vals[vi+1])/2;
+        const LX=[],RX=[],Ly=[],Ry=[];
+        X.forEach((r,i)=>{if(r[fi]<=thr){LX.push(r);Ly.push(y[i]);}else{RX.push(r);Ry.push(y[i]);}});
+        if(!LX.length||!RX.length) continue;
         const g=gini(Ly)*Ly.length/y.length+gini(Ry)*Ry.length/y.length;
-        if(g<bestGini){bestGini=g;bestFeat=fi;bestThr=thr;bestL=Li;bestR=Ri;bestLy=Ly;bestRy=Ry;}
+        if(g<bG){bG=g;bF=fi;bT=thr;bLX=LX;bRX=RX;bLy=Ly;bRy=Ry;}
       }
     }
-    if(bestFeat===-1){
-      const counts={};y.forEach(c=>counts[c]=(counts[c]||0)+1);
-      t.label=Object.keys(counts).reduce((a,b)=>counts[a]>counts[b]?a:b);
-      return t;
-    }
-    t.feat=bestFeat;t.thr=bestThr;
-    t.left=DTree.train(bestL,bestLy,depth+1,maxDepth,minSamples,rng);
-    t.right=DTree.train(bestR,bestRy,depth+1,maxDepth,minSamples,rng);
+    if(bF===-1){const c={};y.forEach(v=>c[v]=(c[v]||0)+1);t.label=Object.keys(c).reduce((a,b)=>c[a]>c[b]?a:b);return t;}
+    t.feat=bF;t.thr=bT;
+    t.left=DTree.train(bLX,bLy,depth+1,maxD,minS,rng);
+    t.right=DTree.train(bRX,bRy,depth+1,maxD,minS,rng);
     return t;
   }
-  predict(x){ return this.label!==null?this.label:(x[this.feat]<=this.thr?this.left.predict(x):this.right.predict(x)); }
+  predict(x){return this.label!==null?this.label:(x[this.feat]<=this.thr?this.left.predict(x):this.right.predict(x));}
 }
 
 function gini(labels){
   if(!labels.length) return 0;
-  const counts={};labels.forEach(l=>counts[l]=(counts[l]||0)+1);
-  return 1-Object.values(counts).reduce((s,c)=>s+(c/labels.length)**2,0);
+  const c={};labels.forEach(l=>c[l]=(c[l]||0)+1);
+  return 1-Object.values(c).reduce((s,v)=>s+(v/labels.length)**2,0);
 }
 
-// seeded RNG (mulberry32)
-function mkRng(seed){ return ()=>{ seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296; }; }
-
-let rfTrees = [];
-let rfAccuracy = 0;
-let rfTestPredictions = [];
-
-function rowToFeatures(r){
-  return [r.voltage||230, r.current||0, r.power||0, r.frequency||50, r.pf||0];
+function mkRng(seed){
+  return ()=>{seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};
 }
 
-function log(msg, type='linf', id='rfLog'){
-  const el=document.getElementById(id);
-  el.innerHTML=`<span class="${type}">> ${msg}</span>`;
+// ═══════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════
+let rfTrees=[], rfAccuracy=0, rfTestPredictions=[];
+
+function rowToFeatures(r){ return [r.voltage||230, r.current||0, r.power||0, r.frequency||50, r.pf||0]; }
+
+function setLog(msg,cls='linf',id='rfLog'){
+  document.getElementById(id).innerHTML=`<span class="${cls}">> ${msg}</span>`;
 }
 
-// ── RUN RANDOM FOREST ──
-function runRandomForest(){
+// ═══════════════════════════════════════════
+// PROGRESS HELPERS
+// ═══════════════════════════════════════════
+let trainStart=0;
+
+function showProgress(){document.getElementById('progressWrap').style.display='block';}
+function hideProgress(){document.getElementById('progressWrap').style.display='none';}
+
+function updateProgress(pct, label, stepIdx){
+  document.getElementById('progressFill').style.width=pct+'%';
+  document.getElementById('progressLabel').textContent=label;
+  // ETA
+  const elapsed=(Date.now()-trainStart)/1000;
+  if(pct>5&&pct<100){
+    const total=elapsed/(pct/100);
+    const left=Math.max(0,total-elapsed);
+    document.getElementById('progressEta').textContent=
+      left>60?`~${Math.ceil(left/60)}m remaining`:`~${Math.ceil(left)}s remaining`;
+  } else if(pct>=100){
+    document.getElementById('progressEta').textContent='Done!';
+  }
+  // step indicators
+  const steps=['ps0','ps1','ps2','ps3','ps4','ps5'];
+  steps.forEach((id,i)=>{
+    const el=document.getElementById(id);
+    el.className='progress-step'+(i<stepIdx?' done':i===stepIdx?' active':'');
+  });
+}
+
+// ═══════════════════════════════════════════
+// RUN RANDOM FOREST — async with yielding
+// ═══════════════════════════════════════════
+async function runRandomForest(){
   const btn=document.getElementById('rfBtn');
   btn.disabled=true;
-  btn.innerHTML='<span class="sp"></span>Training 100 trees...';
-  log('Loading 19,084 training samples...','linf','rfLog');
+  btn.innerHTML='<span class="sp"></span>Training...';
+  showProgress();
+  trainStart=Date.now();
+  updateProgress(2,'Preparing training data...',0);
+  setLog('Loading 19,084 training samples...','linf','rfLog');
 
-  setTimeout(()=>{
-    const trainX = VEAM_TRAIN.map(rowToFeatures);
-    const trainY = VEAM_TRAIN.map(r=>r.label);
-    const testX  = VEAM_TEST.map(rowToFeatures);
-    const testY  = VEAM_TEST.map(r=>r.label);
+  await sleep(30);
 
-    log('Training Random Forest (100 trees, maxDepth=8)...','linf','rfLog');
+  const trainX=VEAM_TRAIN.map(rowToFeatures);
+  const trainY=VEAM_TRAIN.map(r=>r.label);
+  const testX=VEAM_TEST.map(rowToFeatures);
+  const testY=VEAM_TEST.map(r=>r.label);
+  const n=trainX.length;
 
-    // Train 100 trees with bootstrap
-    rfTrees=[];
-    const n=trainX.length;
-    for(let t=0;t<100;t++){
-      const rng=mkRng(42+t*7919);
-      // bootstrap sample
+  rfTrees=[];
+  const TOTAL=100;
+  const BATCH=5; // trees per async chunk
+
+  for(let t=0;t<TOTAL;t+=BATCH){
+    for(let b=t;b<Math.min(t+BATCH,TOTAL);b++){
+      const rng=mkRng(42+b*7919);
       const idxs=[];for(let i=0;i<n;i++) idxs.push(Math.floor(rng()*n));
-      const bX=idxs.map(i=>trainX[i]);
-      const bY=idxs.map(i=>trainY[i]);
-      rfTrees.push(DTree.train(bX,bY,0,8,5,rng));
+      rfTrees.push(DTree.train(idxs.map(i=>trainX[i]),idxs.map(i=>trainY[i]),0,8,5,rng));
     }
+    const pct=Math.round((Math.min(t+BATCH,TOTAL)/TOTAL)*85)+5;
+    const stepIdx=t<25?1:t<50?2:t<75?3:4;
+    updateProgress(pct,`Training tree ${Math.min(t+BATCH,TOTAL)} / ${TOTAL}...`,stepIdx);
+    setLog(`Training... ${Math.min(t+BATCH,TOTAL)}/${TOTAL} trees done`,'linf','rfLog');
+    await sleep(0); // yield to browser
+  }
 
-    // Predict test set (majority vote)
-    rfTestPredictions=testX.map(x=>{
-      const votes={};
-      rfTrees.forEach(tree=>{
-        const p=tree.predict(x);
-        votes[p]=(votes[p]||0)+1;
-      });
-      return Object.keys(votes).reduce((a,b)=>votes[a]>votes[b]?a:b);
-    });
+  updateProgress(92,'Evaluating on test set...',5);
+  setLog('Classifying 4,771 test readings...','linf','rfLog');
+  await sleep(30);
 
-    // Accuracy
-    let correct=0;
-    rfTestPredictions.forEach((p,i)=>{ if(p===testY[i]) correct++; });
-    rfAccuracy=correct/testY.length;
-
-    // Per-class accuracy
-    const classCorrect={},classTotal={};
-    testY.forEach((y,i)=>{
-      classTotal[y]=(classTotal[y]||0)+1;
-      if(rfTestPredictions[i]===y) classCorrect[y]=(classCorrect[y]||0)+1;
-    });
-
-    // Test set distribution
-    const testDist={};
-    rfTestPredictions.forEach(p=>testDist[p]=(testDist[p]||0)+1);
-
-    log(`Training complete! Accuracy: ${(rfAccuracy*100).toFixed(2)}% on ${testX.length} test samples`,'lok','rfLog');
-
-    renderRFResults(testDist, testX.length, classCorrect, classTotal);
-
-    btn.disabled=false;
-    btn.innerHTML='🌲 Re-run Random Forest';
-    document.getElementById('groqBtn').disabled=false;
-    log('Now click "Run Groq AI Analysis" to compare →','linf','groqLog');
-  }, 50);
-}
-
-function renderRFResults(dist, total, classCorrect, classTotal){
-  const area=document.getElementById('rfResults');
-  const sorted=Object.entries(dist).sort((a,b)=>b[1]-a[1]);
-  const confColor={};
-  Object.keys(classCorrect).forEach(k=>{
-    const acc=classCorrect[k]/classTotal[k];
-    confColor[k]=acc>=0.90?'var(--green)':acc>=0.75?'var(--amber)':'var(--red)';
+  rfTestPredictions=testX.map(x=>{
+    const v={};
+    rfTrees.forEach(tree=>{const p=tree.predict(x);v[p]=(v[p]||0)+1;});
+    return Object.keys(v).reduce((a,b)=>v[a]>v[b]?a:b);
   });
 
+  let correct=0;
+  rfTestPredictions.forEach((p,i)=>{if(p===testY[i])correct++;});
+  rfAccuracy=correct/testY.length;
+
+  const classCorrect={},classTotal={};
+  testY.forEach((y,i)=>{
+    classTotal[y]=(classTotal[y]||0)+1;
+    if(rfTestPredictions[i]===y)classCorrect[y]=(classCorrect[y]||0)+1;
+  });
+
+  const dist={};
+  rfTestPredictions.forEach(p=>dist[p]=(dist[p]||0)+1);
+
+  updateProgress(100,`Done! Accuracy: ${(rfAccuracy*100).toFixed(2)}%`,5);
+  const elapsed=((Date.now()-trainStart)/1000).toFixed(1);
+  setLog(`Training complete in ${elapsed}s — Accuracy: ${(rfAccuracy*100).toFixed(2)}% on 4,771 test readings`,'lok','rfLog');
+
+  await sleep(400);
+  hideProgress();
+
+  renderRFResults(dist,testX.length,classCorrect,classTotal);
+  btn.disabled=false;
+  btn.innerHTML='🌲 Re-run Random Forest';
+  document.getElementById('groqBtn').disabled=false;
+  setLog('Now click "Run Groq AI Analysis" to compare results','linf','groqLog');
+}
+
+function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+
+function renderRFResults(dist,total,classCorrect,classTotal){
+  const area=document.getElementById('rfResults');
+  const sorted=Object.entries(dist).sort((a,b)=>b[1]-a[1]);
   area.innerHTML=`
   <div style="margin-top:4px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-      <span style="font-family:var(--mono);font-size:10px;color:var(--muted);">TEST SET PREDICTIONS (${total} readings)</span>
-      <span style="font-family:var(--mono);font-size:13px;color:var(--green);font-weight:700;">${(rfAccuracy*100).toFixed(2)}% Accuracy</span>
+      <span style="font-family:var(--mono);font-size:10px;color:var(--muted);">TEST SET — ${total} READINGS CLASSIFIED</span>
+      <span style="font-family:var(--mono);font-size:14px;color:var(--green);font-weight:700;">${(rfAccuracy*100).toFixed(2)}% Accuracy</span>
     </div>
     <div class="app-grid">
-      ${sorted.map(([label,count])=>{
-        const info=APPLIANCE_INFO[label]||{icon:'🔌',color:'#64748b'};
-        const pct=(count/total*100).toFixed(1);
-        const acc=classCorrect[label]?((classCorrect[label]/classTotal[label])*100).toFixed(1):'—';
-        const cc=confColor[label]||'var(--muted)';
-        return `
-        <div class="app-card">
-          <div class="app-top">
-            <div class="app-dot" style="background:${info.color};"></div>
-            <span style="font-size:15px;">${info.icon}</span>
-            <span class="app-name">${label}</span>
-            <span class="app-count">${count}</span>
-          </div>
-          <div class="app-metrics">
-            <div class="met-box">
-              <div class="met-val" style="color:${info.color};">${pct}%</div>
-              <div class="met-lbl">Share</div>
-            </div>
-            <div class="met-box">
-              <div class="met-val" style="color:${cc};">${acc}%</div>
-              <div class="met-lbl">Accuracy</div>
-            </div>
-            <div class="met-box">
-              <div class="met-val" style="color:var(--cyan);">${count}</div>
-              <div class="met-lbl">Predicted</div>
-            </div>
-          </div>
-          <div class="bar-bg"><div class="bar-fill" style="width:0%;background:${info.color};" data-t="${pct}"></div></div>
-          <div class="bar-pct">${pct}% of test set</div>
-        </div>`;
-      }).join('')}
+    ${sorted.map(([label,count])=>{
+      const info=APPLIANCE_INFO[label]||{icon:'🔌',color:'#64748b'};
+      const pct=(count/total*100).toFixed(1);
+      const acc=classCorrect[label]?((classCorrect[label]/classTotal[label])*100).toFixed(1):'—';
+      const accNum=classCorrect[label]?(classCorrect[label]/classTotal[label]):0;
+      const accColor=accNum>=0.90?'var(--green)':accNum>=0.75?'var(--amber)':'var(--red)';
+      return `
+      <div class="app-card">
+        <div class="app-top">
+          <div class="app-dot" style="background:${info.color};"></div>
+          <span style="font-size:15px;">${info.icon}</span>
+          <span class="app-name">${label}</span>
+          <span class="app-count">${count} samples</span>
+        </div>
+        <div class="app-metrics">
+          <div class="met-box"><div class="met-val" style="color:${info.color};">${pct}%</div><div class="met-lbl">Share</div></div>
+          <div class="met-box"><div class="met-val" style="color:${accColor};">${acc}%</div><div class="met-lbl">Accuracy</div></div>
+          <div class="met-box"><div class="met-val" style="color:var(--cyan);">${count}</div><div class="met-lbl">Predicted</div></div>
+        </div>
+        <div class="bar-bg"><div class="bar-fill" style="width:0%;background:${info.color};" data-t="${pct}"></div></div>
+        <div class="bar-pct">${pct}% of test set</div>
+      </div>`;
+    }).join('')}
     </div>
   </div>`;
-
   requestAnimationFrame(()=>{
-    document.querySelectorAll('.bar-fill[data-t]').forEach(el=>{ el.style.width=el.dataset.t+'%'; });
+    document.querySelectorAll('.bar-fill[data-t]').forEach(el=>el.style.width=el.dataset.t+'%');
   });
 }
 
-// ── RUN GROQ AI ──
+// ═══════════════════════════════════════════
+// RUN GROQ AI
+// ═══════════════════════════════════════════
 async function runGroqAI(){
-  if(!rfTrees.length){ log('Run Random Forest first','lwrn','groqLog'); return; }
+  if(!rfTrees.length){setLog('Run Random Forest first','lwrn','groqLog');return;}
   const btn=document.getElementById('groqBtn');
   btn.disabled=true;
   btn.innerHTML='<span class="sp spp"></span>Asking Groq AI...';
-  log('Sending test set statistics to Groq AI (LLaMA 3.3 70B)...','linf','groqLog');
+  setLog('Sending test set statistics to Groq AI (LLaMA 3.3 70B)...','linf','groqLog');
   document.getElementById('groqResults').innerHTML='';
 
-  const testRows = VEAM_TEST;
-  const avgP   = (testRows.reduce((s,r)=>s+r.power,0)/testRows.length).toFixed(2);
-  const avgI   = (testRows.reduce((s,r)=>s+r.current,0)/testRows.length).toFixed(4);
-  const avgPF  = (testRows.reduce((s,r)=>s+r.pf,0)/testRows.length).toFixed(4);
-  const avgV   = (testRows.reduce((s,r)=>s+r.voltage,0)/testRows.length).toFixed(2);
-  const avgF   = (testRows.reduce((s,r)=>s+(r.frequency||50),0)/testRows.length).toFixed(2);
-  const minP   = Math.min(...testRows.map(r=>r.power)).toFixed(1);
-  const maxP   = Math.max(...testRows.map(r=>r.power)).toFixed(1);
+  const rows=VEAM_TEST;
+  const avgP=(rows.reduce((s,r)=>s+r.power,0)/rows.length).toFixed(2);
+  const avgI=(rows.reduce((s,r)=>s+r.current,0)/rows.length).toFixed(4);
+  const avgPF=(rows.reduce((s,r)=>s+r.pf,0)/rows.length).toFixed(4);
+  const avgV=(rows.reduce((s,r)=>s+r.voltage,0)/rows.length).toFixed(2);
+  const avgF=(rows.reduce((s,r)=>s+(r.frequency||50),0)/rows.length).toFixed(2);
+  const minP=Math.min(...rows.map(r=>r.power)).toFixed(1);
+  const maxP=Math.max(...rows.map(r=>r.power)).toFixed(1);
+  const step=Math.floor(rows.length/5);
+  const samples=[0,1,2,3,4].map(i=>rows[Math.min(i*step,rows.length-1)]);
 
-  const step = Math.floor(testRows.length/5);
-  const samples = [0,1,2,3,4].map(i=>testRows[Math.min(i*step,testRows.length-1)]);
+  const prompt=`You are a NILM (Non-Intrusive Load Monitoring) expert. Analyze this real electrical data from the DSUAL dataset (University of Almeria, Spain).
 
-  const prompt=`You are a NILM (Non-Intrusive Load Monitoring) expert analyzing real household electrical data from the DSUAL dataset (University of Almeria, Spain).
+TEST SET: ${rows.length} real readings from a smart energy meter.
 
-I have ${testRows.length} real electrical readings from a smart energy meter (20% test set).
-
-TEST SET STATISTICS:
-- Average Active Power: ${avgP} W
-- Average Current: ${avgI} A
-- Average Power Factor: ${avgPF}
-- Average Voltage: ${avgV} V
-- Average Frequency: ${avgF} Hz
-- Power Range: ${minP}W to ${maxP}W
+STATISTICS:
+- Avg Active Power: ${avgP} W | Range: ${minP}W to ${maxP}W
+- Avg Current: ${avgI} A
+- Avg Power Factor: ${avgPF}
+- Avg Voltage: ${avgV} V
+- Avg Frequency: ${avgF} Hz
 
 5 REPRESENTATIVE SAMPLES:
-${samples.map((r,i)=>`  Sample ${i+1}: Power=${r.power}W, Current=${r.current}A, PF=${r.pf}, Voltage=${r.voltage}V`).join('\n')}
+${samples.map((r,i)=>`  [${i+1}] Power=${r.power}W  Current=${r.current}A  PF=${r.pf}  Voltage=${r.voltage}V`).join('\n')}
 
-KNOWN APPLIANCES IN THIS DATASET:
-- Incandescent Lamp (avg ~48W, PF~1.0)
-- LED Lamp (avg ~12W, PF~0.57)
-- Fan (avg ~25W, PF~0.997)
-- Laptop (avg ~11W, PF~0.75)
-- Fryer (avg ~16W, PF~0.73)
+APPLIANCES IN THIS DATASET:
+- Incandescent Lamp (typical: ~48W, PF~1.0)
+- LED Lamp (typical: ~12W, PF~0.57)
+- Fan (typical: ~25W, PF~0.997)
+- Laptop (typical: ~11W, PF~0.75)
+- Fryer (typical: ~16W, PF~0.73)
 
-Task: Based on the electrical signatures, estimate what percentage of the ${testRows.length} test readings belong to each appliance.
-The percentages must sum to exactly 100%.
+Based on the power signatures in this test set, estimate the percentage of readings belonging to each appliance.
+Percentages must sum to 100%.
 
 Respond ONLY with a valid JSON array (no explanation, no markdown):
-[
-  {"name": "Appliance Name", "percentage": 35, "confidence": "High"},
-  {"name": "Appliance Name", "percentage": 25, "confidence": "Medium"}
-]`;
+[{"name":"Appliance Name","percentage":35,"confidence":"High"}]`;
 
   try{
     const res=await fetch('/api/gemini',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
+      method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({prompt})
     });
     if(!res.ok) throw new Error(`API error ${res.status}`);
     const data=await res.json();
     const raw=data.text||'';
-    log('Groq AI responded — parsing classification...','lok','groqLog');
+    setLog('Groq AI responded — parsing result...','lok','groqLog');
 
     let groqData=null;
-    try{
-      const m=raw.match(/\[[\s\S]*\]/);
-      if(m) groqData=JSON.parse(m[0]);
-    }catch(e){}
+    try{const m=raw.match(/\[[\s\S]*\]/);if(m)groqData=JSON.parse(m[0]);}catch(e){}
 
     if(groqData&&Array.isArray(groqData)&&groqData.length>0){
       renderGroqResults(groqData);
@@ -727,10 +774,10 @@ Respond ONLY with a valid JSON array (no explanation, no markdown):
           <div class="groq-title">Groq AI Response (Raw)</div>
           <div class="groq-raw">${raw}</div>
         </div>`;
-      renderSideBySide(null, raw);
+      renderSideBySide(null,raw);
     }
   }catch(e){
-    log('Error: '+e.message,'lwrn','groqLog');
+    setLog('Error: '+e.message,'lwrn','groqLog');
   }finally{
     btn.disabled=false;
     btn.innerHTML='🤖 Re-run Groq AI';
@@ -738,16 +785,14 @@ Respond ONLY with a valid JSON array (no explanation, no markdown):
 }
 
 function renderGroqResults(data){
-  const area=document.getElementById('groqResults');
   const confC={High:'var(--green)',Medium:'var(--amber)',Low:'var(--red)'};
-  area.innerHTML=`
+  document.getElementById('groqResults').innerHTML=`
   <div class="groq-box">
     <div class="groq-title">Groq AI — Test Set Classification (${VEAM_TEST.length} readings)</div>
     ${data.map(a=>{
       const info=APPLIANCE_INFO[a.name]||{icon:'🔌',color:'#64748b'};
       const cc=confC[a.confidence]||'var(--muted)';
-      return `
-      <div class="groq-row">
+      return `<div class="groq-row">
         <span class="groq-icon">${info.icon}</span>
         <span class="groq-name">${a.name}</span>
         <div class="groq-bar-bg"><div class="groq-bar-fill" style="width:0%" data-t="${a.percentage}"></div></div>
@@ -757,17 +802,15 @@ function renderGroqResults(data){
     }).join('')}
   </div>`;
   requestAnimationFrame(()=>{
-    area.querySelectorAll('.groq-bar-fill[data-t]').forEach(el=>el.style.width=el.dataset.t+'%');
+    document.querySelectorAll('.groq-bar-fill[data-t]').forEach(el=>el.style.width=el.dataset.t+'%');
   });
 }
 
-function renderSideBySide(groqData, rawText){
+function renderSideBySide(groqData,rawText){
   const card=document.getElementById('sbsCard');
   card.style.display='block';
 
-  // RF side — test distribution
-  const dist={};
-  rfTestPredictions.forEach(p=>dist[p]=(dist[p]||0)+1);
+  const dist={};rfTestPredictions.forEach(p=>dist[p]=(dist[p]||0)+1);
   const total=rfTestPredictions.length;
   const rfSorted=Object.entries(dist).sort((a,b)=>b[1]-a[1]);
 
@@ -779,10 +822,8 @@ function renderSideBySide(groqData, rawText){
     </div>`;
   }).join('');
 
-  // Groq side
-  const groqDiv=document.getElementById('groqSbs');
   if(groqData){
-    groqDiv.innerHTML=groqData.map(a=>{
+    document.getElementById('groqSbs').innerHTML=groqData.map(a=>{
       const info=APPLIANCE_INFO[a.name]||{icon:'🔌'};
       return `<div class="sbs-row">
         <span>${info.icon} ${a.name}</span>
@@ -790,33 +831,24 @@ function renderSideBySide(groqData, rawText){
       </div>`;
     }).join('');
   } else {
-    groqDiv.innerHTML=`<div style="font-size:11px;color:var(--muted);line-height:1.6;">${(rawText||'').substring(0,300)}</div>`;
+    document.getElementById('groqSbs').innerHTML=`<div style="font-size:11px;color:var(--muted);line-height:1.6;">${(rawText||'').substring(0,300)}</div>`;
   }
 
-  // Agreement
   if(groqData){
     const rfNames=new Set(rfSorted.filter(([,c])=>c/total>0.05).map(([l])=>l));
     const grNames=new Set(groqData.filter(a=>a.percentage>5).map(a=>a.name));
     const inter=[...rfNames].filter(n=>grNames.has(n));
     const agree=Math.round(inter.length/Math.max(rfNames.size,grNames.size)*100);
     const isHigh=agree>=60;
-
     document.getElementById('winnerDiv').innerHTML=`
     <div class="winner" style="background:${isHigh?'rgba(0,229,160,.06)':'rgba(255,179,71,.06)'};border-color:${isHigh?'var(--green)':'var(--amber)'};">
       <div class="winner-title">Agreement Score</div>
       <div class="winner-name" style="color:${isHigh?'var(--green)':'var(--amber)'};">${agree}% Match</div>
-      <div class="winner-desc">${inter.length>0?'Both agree on: '+inter.join(', '):'Methods disagree on classification'}</div>
+      <div class="winner-desc">${inter.length>0?'Both methods agree on: '+inter.join(', '):'Methods show different classification patterns'}</div>
       <div style="margin-top:10px;font-size:11px;color:var(--muted);">
-        ${isHigh?'Strong agreement — both methods detect similar appliances':'Partial agreement — RF deterministic vs Groq probabilistic'}
-      </div>
-      <div style="margin-top:8px;font-size:12px;color:var(--green);font-weight:600;">
-        RF Accuracy: ${(rfAccuracy*100).toFixed(2)}% (measurable) vs Groq AI: qualitative only
-      </div>
-      <div style="margin-top:6px;font-size:11px;color:var(--cyan);">
-        Conclusion: Random Forest is preferred for NILM — measurable accuracy, offline, deterministic, free, explainable.
+        RF: ${(rfAccuracy*100).toFixed(2)}% measurable accuracy · Groq AI: qualitative reasoning, no ground truth score
       </div>
     </div>`;
-
     card.scrollIntoView({behavior:'smooth',block:'start'});
   }
 }
