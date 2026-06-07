@@ -3,341 +3,1126 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>VEAM — Random Forest vs Groq AI · NILM Comparison</title>
-<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<title>VEAM — NILM · RF vs Groq AI</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
 <script src="data.js"></script>
 <style>
-:root{
-  --bg:#080c14;--surface:#0d1420;--surface2:#111827;--border:#1e2d45;
-  --cyan:#00d4ff;--cyan2:#0099cc;--green:#00e5a0;--amber:#ffb347;
-  --red:#ff5f6d;--purple:#a78bfa;--text:#e2e8f0;--muted:#64748b;
-  --mono:'Space Mono',monospace;--sans:'DM Sans',sans-serif;
+:root {
+  --bg: #09090b;
+  --surface: #111113;
+  --surface2: #18181b;
+  --border: #27272a;
+  --border2: #3f3f46;
+  --cyan: #22d3ee;
+  --cyan-dim: rgba(34,211,238,.1);
+  --green: #4ade80;
+  --green-dim: rgba(74,222,128,.1);
+  --amber: #fbbf24;
+  --amber-dim: rgba(251,191,36,.1);
+  --violet: #a78bfa;
+  --violet-dim: rgba(167,139,250,.1);
+  --red: #f87171;
+  --text: #fafafa;
+  --text2: #a1a1aa;
+  --text3: #52525b;
+  --mono: 'JetBrains Mono', monospace;
+  --display: 'Syne', sans-serif;
+  --body: 'Instrument Sans', sans-serif;
+  --r-sm: 10px;
+  --r-md: 14px;
+  --r-lg: 20px;
 }
-*{box-sizing:border-box;margin:0;padding:0;}
-body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;}
-body::before{content:'';position:fixed;inset:0;z-index:0;
-  background-image:linear-gradient(rgba(0,212,255,.03) 1px,transparent 1px),
-  linear-gradient(90deg,rgba(0,212,255,.03) 1px,transparent 1px);
-  background-size:40px 40px;pointer-events:none;}
-.wrap{position:relative;z-index:1;max-width:920px;margin:0 auto;padding:24px 16px 60px;}
 
-/* header */
-header{text-align:center;padding:36px 0 28px;}
-.logo-row{display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:8px;}
-.logo-icon{width:46px;height:46px;border-radius:12px;
-  background:linear-gradient(135deg,var(--cyan),var(--cyan2));
-  display:flex;align-items:center;justify-content:center;font-size:24px;}
-h1{font-family:var(--mono);font-size:26px;font-weight:700;color:var(--cyan);}
-.subtitle{font-size:13px;color:var(--muted);margin-top:4px;}
-.badge-row{display:flex;gap:8px;justify-content:center;margin-top:14px;flex-wrap:wrap;}
-.badge{font-family:var(--mono);font-size:10px;padding:4px 10px;border-radius:20px;border:1px solid;font-weight:700;letter-spacing:.5px;}
-.bc{border-color:var(--cyan);color:var(--cyan);background:rgba(0,212,255,.08);}
-.bg{border-color:var(--green);color:var(--green);background:rgba(0,229,160,.08);}
-.ba{border-color:var(--amber);color:var(--amber);background:rgba(255,179,71,.08);}
-.bp{border-color:var(--purple);color:var(--purple);background:rgba(167,139,250,.08);}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-/* vs banner */
-.vs-banner{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px;
-  background:var(--surface);border:1px solid var(--border);border-radius:16px;
-  padding:16px 20px;margin-bottom:20px;}
-.vs-col{text-align:center;}
-.vs-lbl{font-size:10px;font-family:var(--mono);color:var(--muted);letter-spacing:.5px;text-transform:uppercase;}
-.vs-name{font-size:15px;font-weight:600;margin-top:4px;}
-.vs-desc{font-size:11px;color:var(--muted);margin-top:2px;}
-.vs-sep{font-family:var(--mono);font-size:18px;font-weight:700;color:var(--border);}
+html { scroll-behavior: smooth; }
 
-/* split */
-.split-row{display:flex;gap:10px;margin-bottom:20px;}
-.split-box{flex:1;border-radius:12px;padding:12px 14px;text-align:center;border:1px solid var(--border);}
-.split-pct{font-family:var(--mono);font-size:22px;font-weight:700;}
-.split-lbl{font-size:11px;color:var(--muted);margin-top:3px;}
-.s-train{background:rgba(0,229,160,.06);border-color:var(--green);}
-.s-train .split-pct{color:var(--green);}
-.s-test{background:rgba(167,139,250,.06);border-color:var(--purple);}
-.s-test .split-pct{color:var(--purple);}
-
-/* card */
-.card{background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden;margin-bottom:20px;}
-.card-header{display:flex;align-items:center;gap:12px;padding:16px 20px 12px;border-bottom:1px solid var(--border);}
-.card-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
-.card-title{font-weight:600;font-size:14px;}
-.card-sub{font-size:11px;color:var(--muted);margin-top:2px;}
-.step-badge{margin-left:auto;font-family:var(--mono);font-size:10px;padding:3px 10px;border-radius:20px;font-weight:700;border:1px solid;}
-.card-body{padding:16px 20px;}
-
-/* stats */
-.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:14px;}
-.stat-box{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px;text-align:center;}
-.stat-val{font-family:var(--mono);font-size:18px;font-weight:700;color:var(--cyan);}
-.stat-lbl{font-size:10px;color:var(--muted);margin-top:3px;}
-
-/* appliance cards */
-.app-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:12px;}
-.app-card{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px 14px;}
-.app-top{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
-.app-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
-.app-name{font-weight:600;font-size:13px;flex:1;}
-.app-count{font-family:var(--mono);font-size:10px;color:var(--muted);}
-.app-metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;}
-.met-box{background:var(--bg);border-radius:8px;padding:7px;text-align:center;}
-.met-val{font-family:var(--mono);font-size:12px;font-weight:700;}
-.met-lbl{font-size:9px;color:var(--muted);margin-top:1px;}
-.bar-bg{background:var(--border);border-radius:4px;height:5px;overflow:hidden;margin-top:8px;}
-.bar-fill{height:100%;border-radius:4px;transition:width 1s cubic-bezier(.4,0,.2,1);}
-.bar-pct{font-size:10px;color:var(--muted);margin-top:3px;text-align:right;}
-
-/* PROGRESS */
-.progress-wrap{margin-top:14px;display:none;}
-.progress-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
-.progress-label{font-family:var(--mono);font-size:11px;color:var(--cyan);}
-.progress-eta{font-family:var(--mono);font-size:11px;color:var(--muted);}
-.progress-bg{background:var(--border);border-radius:6px;height:10px;overflow:hidden;}
-.progress-fill{height:100%;border-radius:6px;background:linear-gradient(90deg,var(--cyan),var(--green));
-  transition:width .3s ease;width:0%;}
-.progress-steps{display:flex;justify-content:space-between;margin-top:6px;}
-.progress-step{font-size:10px;color:var(--muted);font-family:var(--mono);}
-.progress-step.done{color:var(--green);}
-.progress-step.active{color:var(--cyan);}
-
-/* buttons */
-.btn{padding:10px 20px;border-radius:10px;border:none;cursor:pointer;
-  font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.3px;
-  transition:all .2s;white-space:nowrap;}
-.btn-cyan{background:linear-gradient(135deg,var(--cyan),var(--cyan2));color:#000;}
-.btn-cyan:hover{opacity:.85;transform:translateY(-1px);}
-.btn-cyan:disabled{opacity:.4;cursor:not-allowed;transform:none;}
-.btn-purple{background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;}
-.btn-purple:hover{opacity:.85;transform:translateY(-1px);}
-.btn-purple:disabled{opacity:.4;cursor:not-allowed;transform:none;}
-.btn-row{display:flex;gap:8px;flex-wrap:wrap;}
-
-/* log */
-.log{background:var(--bg);border:1px solid var(--border);border-radius:10px;
-  padding:10px 14px;font-family:var(--mono);font-size:11px;color:var(--muted);
-  min-height:40px;max-height:90px;overflow-y:auto;line-height:1.7;margin-top:12px;}
-.lok{color:var(--green)}.linf{color:var(--cyan)}.lwrn{color:var(--amber);}
-
-/* spinner */
-.sp{display:inline-block;width:13px;height:13px;border:2px solid var(--border);
-  border-top-color:var(--cyan);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px;}
-.spp{border-top-color:var(--purple);}
-@keyframes spin{to{transform:rotate(360deg);}}
-
-/* groq result */
-.groq-box{background:var(--surface2);border:1px solid var(--purple);border-radius:12px;padding:14px 16px;margin-top:14px;}
-.groq-title{font-family:var(--mono);font-size:10px;color:var(--purple);letter-spacing:.5px;text-transform:uppercase;margin-bottom:10px;}
-.groq-row{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;
-  background:var(--bg);margin-bottom:6px;border:1px solid var(--border);}
-.groq-row:last-child{margin-bottom:0;}
-.groq-icon{font-size:18px;}
-.groq-name{font-weight:600;font-size:13px;flex:1;}
-.groq-pct{font-family:var(--mono);font-size:11px;color:var(--purple);font-weight:700;}
-.groq-bar-bg{flex:1;background:var(--border);border-radius:4px;height:5px;overflow:hidden;max-width:90px;}
-.groq-bar-fill{height:100%;border-radius:4px;background:var(--purple);transition:width 1s cubic-bezier(.4,0,.2,1);}
-
-/* side by side */
-.sbs-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px;}
-.sbs-panel{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:12px;}
-.sbs-title{font-family:var(--mono);font-size:10px;letter-spacing:.5px;text-transform:uppercase;
-  margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--border);}
-.sbs-row{display:flex;align-items:center;justify-content:space-between;
-  padding:7px 0;border-bottom:1px solid rgba(30,45,69,.4);font-size:12px;}
-.sbs-row:last-child{border:none;}
-
-/* acc bars */
-.acc-row{display:flex;align-items:center;gap:10px;margin-top:8px;}
-.acc-lbl{font-size:11px;color:var(--muted);width:130px;flex-shrink:0;font-family:var(--mono);}
-.acc-bg{flex:1;background:var(--border);border-radius:4px;height:8px;overflow:hidden;}
-.acc-fill{height:100%;border-radius:4px;}
-.acc-pct{font-family:var(--mono);font-size:11px;font-weight:700;width:42px;text-align:right;}
-
-/* comparison table */
-.comp-tbl{width:100%;border-collapse:collapse;font-size:12px;}
-.comp-tbl th{font-family:var(--mono);font-size:10px;color:var(--muted);text-align:left;
-  padding:8px 10px;border-bottom:1px solid var(--border);}
-.comp-tbl td{padding:10px 10px;border-bottom:1px solid rgba(30,45,69,.5);vertical-align:middle;}
-.comp-tbl tr:last-child td{border:none;}
-.comp-tbl tr:hover td{background:rgba(255,255,255,.02);}
-.td-m{color:var(--muted);font-size:11px;}
-.td-rf{color:var(--green);font-weight:500;}
-.td-gr{color:var(--purple);font-weight:500;}
-.win-g{font-size:9px;padding:2px 6px;border-radius:10px;font-family:var(--mono);margin-left:5px;font-weight:700;
-  background:rgba(0,229,160,.12);color:var(--green);border:1px solid var(--green);}
-.win-p{font-size:9px;padding:2px 6px;border-radius:10px;font-family:var(--mono);margin-left:5px;font-weight:700;
-  background:rgba(167,139,250,.12);color:var(--purple);border:1px solid var(--purple);}
-
-/* winner */
-.winner{border-radius:14px;padding:16px 20px;text-align:center;margin-top:20px;border:1px solid;}
-.winner-title{font-family:var(--mono);font-size:11px;letter-spacing:.5px;color:var(--muted);text-transform:uppercase;}
-.winner-name{font-size:20px;font-weight:700;margin-top:6px;}
-.winner-desc{font-size:12px;color:var(--muted);margin-top:4px;}
-
-/* empty */
-.empty{text-align:center;padding:28px;color:var(--muted);font-size:13px;}
-.empty-icon{font-size:32px;margin-bottom:10px;opacity:.4;}
-
-/* groq raw */
-.groq-raw{background:var(--bg);border:1px solid var(--border);border-radius:10px;
-  padding:12px 14px;font-size:12px;color:var(--text);line-height:1.7;
-  margin-top:12px;white-space:pre-wrap;word-break:break-word;max-height:200px;overflow-y:auto;}
-
-/* conf */
-.conf{font-family:var(--mono);font-size:9px;padding:2px 7px;border-radius:20px;font-weight:700;}
-
-@media(max-width:600px){
-  .stats-grid{grid-template-columns:repeat(2,1fr);}
-  .app-grid{grid-template-columns:1fr;}
-  .sbs-grid{grid-template-columns:1fr;}
-  .vs-banner{grid-template-columns:1fr;}
-  .vs-sep{display:none;}
-  .split-row{flex-direction:column;}
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--body);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
 }
+
+/* ── NOISE TEXTURE ── */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 0;
+  opacity: .4;
+}
+
+/* ── GLOW ── */
+.glow-bg {
+  position: fixed;
+  top: -20vh;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 700px;
+  height: 400px;
+  background: radial-gradient(ellipse, rgba(34,211,238,.04) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── LAYOUT ── */
+.wrap {
+  position: relative;
+  z-index: 1;
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 0 20px 80px;
+}
+
+/* ── HEADER ── */
+header {
+  padding: 52px 0 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 16px;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.logo-mark {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--cyan);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+  box-shadow: 0 0 24px rgba(34,211,238,.3);
+}
+
+.logo-name {
+  font-family: var(--display);
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -.5px;
+  color: var(--text);
+}
+
+.logo-name span { color: var(--cyan); }
+
+.tagline {
+  font-size: 13px;
+  color: var(--text2);
+  font-family: var(--mono);
+  letter-spacing: .3px;
+}
+
+.pill-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 4px;
+}
+
+.pill {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 99px;
+  letter-spacing: .4px;
+  border: 1px solid;
+  text-transform: uppercase;
+}
+
+.pill-c { color: var(--cyan); border-color: rgba(34,211,238,.3); background: var(--cyan-dim); }
+.pill-g { color: var(--green); border-color: rgba(74,222,128,.3); background: var(--green-dim); }
+.pill-v { color: var(--violet); border-color: rgba(167,139,250,.3); background: var(--violet-dim); }
+.pill-a { color: var(--amber); border-color: rgba(251,191,36,.3); background: var(--amber-dim); }
+
+/* ── DIVIDER ── */
+.divider {
+  height: 1px;
+  background: var(--border);
+  margin: 0 0 28px;
+}
+
+/* ── VERSUS BAR ── */
+.versus {
+  display: grid;
+  grid-template-columns: 1fr 56px 1fr;
+  align-items: center;
+  gap: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  margin-bottom: 28px;
+  background: var(--surface);
+}
+
+.versus-side {
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.versus-side.right { text-align: right; }
+
+.versus-label {
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text3);
+}
+
+.versus-name {
+  font-family: var(--display);
+  font-size: 17px;
+  font-weight: 700;
+  margin-top: 2px;
+}
+
+.versus-desc {
+  font-size: 11px;
+  color: var(--text2);
+  margin-top: 2px;
+}
+
+.versus-sep {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  border-left: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+  font-family: var(--display);
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--text3);
+  letter-spacing: 1px;
+}
+
+/* ── SPLIT ROW ── */
+.split-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 28px;
+}
+
+.split-card {
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--surface);
+}
+
+.split-pct {
+  font-family: var(--display);
+  font-size: 28px;
+  font-weight: 800;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.split-info { flex: 1; }
+
+.split-title {
+  font-weight: 600;
+  font-size: 13px;
+  margin-bottom: 2px;
+}
+
+.split-sub {
+  font-size: 11px;
+  color: var(--text2);
+}
+
+/* ── SECTION LABEL ── */
+.section-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--text3);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.section-label::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+/* ── CARD ── */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  margin-bottom: 16px;
+  transition: border-color .2s;
+}
+
+.card:hover { border-color: var(--border2); }
+
+.card-head {
+  padding: 18px 22px 16px;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.card-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: var(--r-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+  flex-shrink: 0;
+}
+
+.card-meta { flex: 1; min-width: 0; }
+
+.card-title {
+  font-family: var(--display);
+  font-size: 15px;
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+
+.card-sub {
+  font-size: 11px;
+  color: var(--text2);
+}
+
+.step-tag {
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 99px;
+  border: 1px solid;
+  letter-spacing: .5px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.card-body { padding: 20px 22px; }
+
+/* ── STATS GRID ── */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+.stat {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 14px 12px;
+  text-align: center;
+}
+
+.stat-val {
+  font-family: var(--display);
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1;
+  margin-bottom: 6px;
+}
+
+.stat-lbl {
+  font-size: 10px;
+  color: var(--text2);
+  font-family: var(--mono);
+  letter-spacing: .3px;
+}
+
+/* ── APPLIANCE GRID ── */
+.app-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.app-tile {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 14px 16px;
+  transition: border-color .2s;
+}
+
+.app-tile:hover { border-color: var(--border2); }
+
+.app-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.app-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.app-emoji { font-size: 16px; }
+
+.app-name {
+  font-weight: 600;
+  font-size: 13px;
+  flex: 1;
+}
+
+.app-count {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text3);
+}
+
+.app-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.met {
+  background: var(--bg);
+  border-radius: 8px;
+  padding: 8px 6px;
+  text-align: center;
+}
+
+.met-val {
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.met-lbl {
+  font-size: 9px;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: .4px;
+}
+
+.bar-wrap { margin-top: 10px; }
+
+.bar-track {
+  background: var(--border);
+  border-radius: 3px;
+  height: 3px;
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 1.2s cubic-bezier(.4, 0, .2, 1);
+}
+
+.bar-label {
+  font-size: 10px;
+  color: var(--text3);
+  margin-top: 4px;
+  text-align: right;
+  font-family: var(--mono);
+}
+
+/* ── PROGRESS ── */
+.progress-wrap {
+  display: none;
+  margin: 14px 0 0;
+}
+
+.progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.progress-lbl {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--cyan);
+}
+
+.progress-eta {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text3);
+}
+
+.progress-track {
+  background: var(--border);
+  border-radius: 4px;
+  height: 6px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: 4px;
+  background: linear-gradient(90deg, var(--cyan), var(--green));
+  transition: width .3s ease;
+  width: 0%;
+}
+
+.progress-steps {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+}
+
+.ps {
+  font-size: 9px;
+  font-family: var(--mono);
+  color: var(--text3);
+  transition: color .2s;
+}
+
+.ps.done { color: var(--green); }
+.ps.active { color: var(--cyan); }
+
+/* ── LOG ── */
+.log {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  padding: 10px 14px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text3);
+  min-height: 38px;
+  max-height: 80px;
+  overflow-y: auto;
+  line-height: 1.8;
+  margin-top: 14px;
+}
+
+.log .ok { color: var(--green); }
+.log .inf { color: var(--cyan); }
+.log .warn { color: var(--amber); }
+
+/* ── BUTTONS ── */
+.btn-row { display: flex; gap: 10px; flex-wrap: wrap; }
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 18px;
+  border-radius: var(--r-sm);
+  border: none;
+  cursor: pointer;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .3px;
+  transition: all .15s;
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+.btn-primary {
+  background: var(--cyan);
+  color: #000;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: #67e8f9;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(34,211,238,.25);
+}
+
+.btn-secondary {
+  background: var(--violet);
+  color: #000;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: #c4b5fd;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(167,139,250,.25);
+}
+
+.btn:disabled {
+  opacity: .35;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* ── SPINNER ── */
+.spin {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(0,0,0,.2);
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: rotating .7s linear infinite;
+}
+
+@keyframes rotating { to { transform: rotate(360deg); } }
+
+/* ── EMPTY STATE ── */
+.empty {
+  text-align: center;
+  padding: 32px 20px;
+  color: var(--text3);
+}
+
+.empty-icon {
+  font-size: 36px;
+  opacity: .3;
+  margin-bottom: 10px;
+}
+
+.empty-text { font-size: 13px; }
+
+/* ── GROQ RESULTS ── */
+.groq-box {
+  background: var(--surface2);
+  border: 1px solid rgba(167,139,250,.2);
+  border-radius: var(--r-md);
+  padding: 16px;
+  margin-top: 16px;
+}
+
+.groq-box-title {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--violet);
+  margin-bottom: 12px;
+}
+
+.groq-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border-radius: 8px;
+  background: var(--bg);
+  margin-bottom: 6px;
+  border: 1px solid var(--border);
+}
+
+.groq-row:last-child { margin-bottom: 0; }
+
+.groq-emoji { font-size: 17px; flex-shrink: 0; }
+
+.groq-name {
+  font-weight: 600;
+  font-size: 13px;
+  flex: 1;
+}
+
+.groq-bar-track {
+  flex: 1;
+  max-width: 80px;
+  background: var(--border);
+  border-radius: 3px;
+  height: 4px;
+  overflow: hidden;
+}
+
+.groq-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: var(--violet);
+  transition: width 1.2s cubic-bezier(.4, 0, .2, 1);
+}
+
+.groq-pct {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--violet);
+  width: 34px;
+  text-align: right;
+}
+
+.conf-badge {
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 99px;
+  border: 1px solid;
+}
+
+/* ── SIDE BY SIDE ── */
+.sbs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.sbs-panel {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 14px;
+}
+
+.sbs-title {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .8px;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.sbs-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 0;
+  font-size: 12px;
+  border-bottom: 1px solid rgba(39,39,42,.6);
+}
+
+.sbs-row:last-child { border: none; padding-bottom: 0; }
+
+/* ── AGREEMENT CARD ── */
+.agreement {
+  border-radius: var(--r-md);
+  padding: 18px 20px;
+  text-align: center;
+  margin-top: 16px;
+  border: 1px solid;
+}
+
+.agreement-label {
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--text3);
+  margin-bottom: 8px;
+}
+
+.agreement-score {
+  font-family: var(--display);
+  font-size: 26px;
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+
+.agreement-desc {
+  font-size: 12px;
+  color: var(--text2);
+}
+
+.agreement-footnote {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text3);
+  margin-top: 10px;
+}
+
+/* ── COMPARISON TABLE ── */
+.comp-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.comp-table th {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text3);
+  text-align: left;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  letter-spacing: .5px;
+  text-transform: uppercase;
+}
+
+.comp-table td {
+  padding: 11px 12px;
+  border-bottom: 1px solid rgba(39,39,42,.5);
+  vertical-align: middle;
+  line-height: 1.5;
+}
+
+.comp-table tr:last-child td { border: none; }
+.comp-table tr:hover td { background: rgba(255,255,255,.015); }
+
+.td-dim { color: var(--text2); font-size: 11px; }
+.td-green { color: var(--green); font-weight: 500; }
+.td-violet { color: var(--violet); font-weight: 500; }
+
+.win-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 9px;
+  padding: 2px 7px;
+  border-radius: 99px;
+  font-family: var(--mono);
+  font-weight: 700;
+  margin-left: 6px;
+  border: 1px solid;
+  vertical-align: middle;
+}
+
+.win-g { color: var(--green); border-color: rgba(74,222,128,.3); background: var(--green-dim); }
+.win-v { color: var(--violet); border-color: rgba(167,139,250,.3); background: var(--violet-dim); }
+
+/* ── ACCURACY BARS ── */
+.acc-section { margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border); }
+
+.acc-section-title {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text3);
+  margin-bottom: 14px;
+}
+
+.acc-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.acc-lbl {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text2);
+  width: 120px;
+  flex-shrink: 0;
+}
+
+.acc-track {
+  flex: 1;
+  background: var(--border);
+  border-radius: 3px;
+  height: 6px;
+  overflow: hidden;
+}
+
+.acc-fill { height: 100%; border-radius: 3px; }
+
+.acc-pct {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  width: 38px;
+  text-align: right;
+}
+
+/* ── CONCLUSION BOX ── */
+.conclusion {
+  margin-top: 18px;
+  padding: 14px 16px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+}
+
+.conclusion-label {
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--text3);
+  margin-bottom: 8px;
+}
+
+.conclusion-text {
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--text2);
+}
+
+/* ── FOOTER ── */
+footer {
+  text-align: center;
+  padding: 28px 0 0;
+  font-size: 11px;
+  color: var(--text3);
+  font-family: var(--mono);
+  letter-spacing: .3px;
+}
+
+/* ── GROQ RAW ── */
+.groq-raw {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  padding: 12px 14px;
+  font-size: 12px;
+  color: var(--text2);
+  line-height: 1.7;
+  margin-top: 12px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+/* ── RESPONSIVE ── */
+@media (max-width: 640px) {
+  .wrap { padding: 0 16px 60px; }
+  header { padding: 36px 0 28px; }
+  .logo-name { font-size: 22px; }
+  .versus { grid-template-columns: 1fr; }
+  .versus-sep { display: none; }
+  .versus-side.right { text-align: left; border-top: 1px solid var(--border); }
+  .split-row { grid-template-columns: 1fr; }
+  .stats-grid { grid-template-columns: repeat(2, 1fr); }
+  .app-grid { grid-template-columns: 1fr; }
+  .sbs { grid-template-columns: 1fr; }
+  .acc-lbl { width: 90px; }
+  .card-head { flex-wrap: wrap; }
+  .step-tag { width: 100%; }
+  .comp-table { font-size: 11px; }
+  .comp-table th, .comp-table td { padding: 9px 8px; }
+}
+
+@media (max-width: 400px) {
+  .pill { font-size: 9px; padding: 2px 8px; }
+  .stat-val { font-size: 17px; }
+  .app-metrics { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ── FADE IN ── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.card { animation: fadeUp .4s ease both; }
+.card:nth-child(1) { animation-delay: .05s; }
+.card:nth-child(2) { animation-delay: .1s; }
+.card:nth-child(3) { animation-delay: .15s; }
+.card:nth-child(4) { animation-delay: .2s; }
 </style>
 </head>
 <body>
+
+<div class="glow-bg"></div>
+
 <div class="wrap">
 
 <!-- HEADER -->
 <header>
-  <div class="logo-row">
-    <div class="logo-icon">⚡</div>
-    <h1>VEAM</h1>
+  <div class="logo">
+    <div class="logo-mark">⚡</div>
+    <div class="logo-name">VE<span>AM</span></div>
   </div>
-  <p class="subtitle">NILM Comparison — Random Forest vs Groq AI (LLaMA 3.3 70B) · DSUAL Dataset</p>
-  <div class="badge-row">
-    <span class="badge bg">RANDOM FOREST</span>
-    <span class="badge bp">GROQ AI</span>
-    <span class="badge bc">NILM · DSUAL</span>
-    <span class="badge ba">PFE · SOUK AHRAS 2026</span>
+  <div class="tagline">NILM · Random Forest vs Groq AI · DSUAL Dataset</div>
+  <div class="pill-row">
+    <span class="pill pill-g">Random Forest</span>
+    <span class="pill pill-v">Groq AI · LLaMA 3.3</span>
+    <span class="pill pill-c">DSUAL · Almeria</span>
+    <span class="pill pill-a">PFE · Souk Ahras 2026</span>
   </div>
 </header>
 
-<!-- VS BANNER -->
-<div class="vs-banner">
-  <div class="vs-col">
-    <div class="vs-lbl">Method A</div>
-    <div class="vs-name" style="color:var(--green);">Random Forest</div>
-    <div class="vs-desc">Supervised ML · 100 Trees · Local</div>
+<div class="divider"></div>
+
+<!-- VERSUS -->
+<div class="versus">
+  <div class="versus-side">
+    <div class="versus-label">Method A</div>
+    <div class="versus-name" style="color:var(--green);">Random Forest</div>
+    <div class="versus-desc">Supervised ML · 100 trees · Offline</div>
   </div>
-  <div class="vs-sep">VS</div>
-  <div class="vs-col">
-    <div class="vs-lbl">Method B</div>
-    <div class="vs-name" style="color:var(--purple);">Groq AI</div>
-    <div class="vs-desc">LLaMA 3.3 70B · Generative AI · API</div>
+  <div class="versus-sep">VS</div>
+  <div class="versus-side right">
+    <div class="versus-label">Method B</div>
+    <div class="versus-name" style="color:var(--violet);">Groq AI</div>
+    <div class="versus-desc">LLaMA 3.3 70B · Zero-shot · API</div>
   </div>
 </div>
 
 <!-- SPLIT INFO -->
 <div class="split-row">
-  <div class="split-box s-train">
-    <div class="split-pct">80%</div>
-    <div class="split-lbl">Training Set — Random Forest learns here</div>
+  <div class="split-card">
+    <div class="split-pct" style="color:var(--green);">80%</div>
+    <div class="split-info">
+      <div class="split-title">Training Set</div>
+      <div class="split-sub">19,084 readings — RF learns here</div>
+    </div>
   </div>
-  <div class="split-box s-test">
-    <div class="split-pct">20%</div>
-    <div class="split-lbl">Test Set — Both methods evaluated here</div>
+  <div class="split-card">
+    <div class="split-pct" style="color:var(--violet);">20%</div>
+    <div class="split-info">
+      <div class="split-title">Test Set</div>
+      <div class="split-sub">4,771 readings — both methods evaluated</div>
+    </div>
   </div>
 </div>
 
 <!-- DATASET CARD -->
+<div class="section-label">Dataset</div>
+
 <div class="card">
-  <div class="card-header">
-    <div class="card-icon" style="background:rgba(0,212,255,.12);">📊</div>
-    <div>
+  <div class="card-head">
+    <div class="card-icon" style="background:var(--cyan-dim);">📊</div>
+    <div class="card-meta">
       <div class="card-title">DSUAL Dataset — Real Measurements</div>
       <div class="card-sub">University of Almeria · 5 appliances · 23,855 readings</div>
     </div>
-    <span class="step-badge bc">DATASET</span>
+    <span class="step-tag pill-c">DATASET</span>
   </div>
   <div class="card-body">
     <div class="stats-grid">
-      <div class="stat-box"><div class="stat-val">23,855</div><div class="stat-lbl">Total Readings</div></div>
-      <div class="stat-box"><div class="stat-val" style="color:var(--green);">19,084</div><div class="stat-lbl">Train (80%)</div></div>
-      <div class="stat-box"><div class="stat-val" style="color:var(--purple);">4,771</div><div class="stat-lbl">Test (20%)</div></div>
-      <div class="stat-box"><div class="stat-val" style="color:var(--amber);">5</div><div class="stat-lbl">Appliances</div></div>
+      <div class="stat">
+        <div class="stat-val" style="color:var(--cyan);">23,855</div>
+        <div class="stat-lbl">Total</div>
+      </div>
+      <div class="stat">
+        <div class="stat-val" style="color:var(--green);">19,084</div>
+        <div class="stat-lbl">Train 80%</div>
+      </div>
+      <div class="stat">
+        <div class="stat-val" style="color:var(--violet);">4,771</div>
+        <div class="stat-lbl">Test 20%</div>
+      </div>
+      <div class="stat">
+        <div class="stat-val" style="color:var(--amber);">5</div>
+        <div class="stat-lbl">Appliances</div>
+      </div>
     </div>
   </div>
 </div>
 
 <!-- RANDOM FOREST CARD -->
+<div class="section-label">Step 1 — Machine Learning</div>
+
 <div class="card">
-  <div class="card-header">
-    <div class="card-icon" style="background:rgba(0,229,160,.12);">🌲</div>
-    <div>
+  <div class="card-head">
+    <div class="card-icon" style="background:var(--green-dim);">🌲</div>
+    <div class="card-meta">
       <div class="card-title">Random Forest Classifier</div>
       <div class="card-sub">100 trees · stratified 80/20 · seed=42 · runs in browser</div>
     </div>
-    <span class="step-badge bg">STEP 1</span>
+    <span class="step-tag pill-g">STEP 1</span>
   </div>
   <div class="card-body">
     <div class="btn-row">
-      <button class="btn btn-cyan" id="rfBtn" onclick="runRandomForest()">🌲 Run Random Forest</button>
+      <button class="btn btn-primary" id="rfBtn" onclick="runRandomForest()">🌲 Run Random Forest</button>
     </div>
 
-    <!-- PROGRESS BAR -->
     <div class="progress-wrap" id="progressWrap">
       <div class="progress-header">
-        <span class="progress-label" id="progressLabel">Preparing data...</span>
+        <span class="progress-lbl" id="progressLabel">Preparing...</span>
         <span class="progress-eta" id="progressEta"></span>
       </div>
-      <div class="progress-bg">
+      <div class="progress-track">
         <div class="progress-fill" id="progressFill"></div>
       </div>
       <div class="progress-steps">
-        <span class="progress-step" id="ps0">Bootstrap</span>
-        <span class="progress-step" id="ps1">Trees 1-25</span>
-        <span class="progress-step" id="ps2">Trees 26-50</span>
-        <span class="progress-step" id="ps3">Trees 51-75</span>
-        <span class="progress-step" id="ps4">Trees 76-100</span>
-        <span class="progress-step" id="ps5">Evaluate</span>
+        <span class="ps" id="ps0">Bootstrap</span>
+        <span class="ps" id="ps1">Trees 1–25</span>
+        <span class="ps" id="ps2">26–50</span>
+        <span class="ps" id="ps3">51–75</span>
+        <span class="ps" id="ps4">76–100</span>
+        <span class="ps" id="ps5">Evaluate</span>
       </div>
     </div>
 
-    <div class="log" id="rfLog">// Ready — click to train Random Forest on 23,855 real DSUAL readings</div>
+    <div class="log" id="rfLog"><span class="inf">> Ready — click to train on 23,855 real DSUAL readings</span></div>
     <div id="rfResults">
-      <div class="empty"><div class="empty-icon">🌲</div>Click "Run Random Forest" to start</div>
+      <div class="empty">
+        <div class="empty-icon">🌲</div>
+        <div class="empty-text">Click "Run Random Forest" to start training</div>
+      </div>
     </div>
   </div>
 </div>
 
 <!-- GROQ AI CARD -->
+<div class="section-label">Step 2 — Generative AI</div>
+
 <div class="card">
-  <div class="card-header">
-    <div class="card-icon" style="background:rgba(167,139,250,.12);">🤖</div>
-    <div>
+  <div class="card-head">
+    <div class="card-icon" style="background:var(--violet-dim);">🤖</div>
+    <div class="card-meta">
       <div class="card-title">Groq AI Classification</div>
-      <div class="card-sub">LLaMA 3.3 70B · Analyzes 4,771 test readings via API</div>
+      <div class="card-sub">LLaMA 3.3 70B · Zero-shot · Analyzes test set statistics</div>
     </div>
-    <span class="step-badge bp">STEP 2</span>
+    <span class="step-tag pill-v">STEP 2</span>
   </div>
   <div class="card-body">
-    <p style="font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.6;">
-      Sends a statistical summary of the <strong style="color:var(--purple);">4,771 test readings</strong>
-      to Groq AI. The model identifies appliances from power signatures without any prior training on this dataset.
+    <p style="font-size:12px;color:var(--text2);line-height:1.7;margin-bottom:16px;">
+      Sends a statistical summary of the <strong style="color:var(--violet);font-weight:600;">4,771 test readings</strong> to Groq AI.
+      The model identifies appliances from power signatures without any prior training on this dataset.
     </p>
-    <button class="btn btn-purple" id="groqBtn" onclick="runGroqAI()" disabled>🤖 Run Groq AI Analysis</button>
-    <div class="log" id="groqLog">// Run Random Forest first, then Groq AI...</div>
+    <div class="btn-row">
+      <button class="btn btn-secondary" id="groqBtn" onclick="runGroqAI()" disabled>🤖 Run Groq AI Analysis</button>
+    </div>
+    <div class="log" id="groqLog"><span class="inf">> Run Random Forest first, then Groq AI...</span></div>
     <div id="groqResults"></div>
   </div>
 </div>
 
-<!-- SIDE BY SIDE -->
+<!-- SIDE BY SIDE (hidden until both run) -->
 <div class="card" id="sbsCard" style="display:none;">
-  <div class="card-header">
-    <div class="card-icon" style="background:rgba(255,179,71,.12);">⚖️</div>
-    <div>
-      <div class="card-title">Test Set — Side by Side</div>
-      <div class="card-sub">4,771 readings · Random Forest predictions vs Groq AI estimates</div>
+  <div class="card-head">
+    <div class="card-icon" style="background:var(--amber-dim);">⚖️</div>
+    <div class="card-meta">
+      <div class="card-title">Side-by-Side Comparison</div>
+      <div class="card-sub">4,771 test readings · RF predictions vs Groq AI estimates</div>
     </div>
   </div>
   <div class="card-body">
-    <div class="sbs-grid">
+    <div class="sbs">
       <div class="sbs-panel">
         <div class="sbs-title" style="color:var(--green);">🌲 Random Forest</div>
         <div id="rfSbs"></div>
       </div>
       <div class="sbs-panel">
-        <div class="sbs-title" style="color:var(--purple);">🤖 Groq AI</div>
+        <div class="sbs-title" style="color:var(--violet);">🤖 Groq AI</div>
         <div id="groqSbs"></div>
       </div>
     </div>
@@ -345,387 +1130,375 @@ h1{font-family:var(--mono);font-size:26px;font-weight:700;color:var(--cyan);}
   </div>
 </div>
 
-<!-- ACADEMIC COMPARISON TABLE -->
+<!-- ACADEMIC COMPARISON -->
+<div class="section-label">Academic Analysis</div>
+
 <div class="card">
-  <div class="card-header">
-    <div class="card-icon" style="background:rgba(255,179,71,.12);">📋</div>
-    <div>
-      <div class="card-title">Academic Comparison — Random Forest vs Groq AI</div>
-      <div class="card-sub">Objective evaluation · Universite de Souk Ahras · PFE 2025-2026</div>
+  <div class="card-head">
+    <div class="card-icon" style="background:var(--amber-dim);">📋</div>
+    <div class="card-meta">
+      <div class="card-title">RF vs Groq AI — Objective Evaluation</div>
+      <div class="card-sub">Université de Souk Ahras · Master Electrotechnique Industrielle · PFE 2025–2026</div>
     </div>
   </div>
   <div class="card-body">
-    <table class="comp-tbl">
+    <table class="comp-table">
       <thead>
         <tr>
           <th>Criterion</th>
           <th style="color:var(--green);">Random Forest</th>
-          <th style="color:var(--purple);">Groq AI (LLaMA 3.3)</th>
+          <th style="color:var(--violet);">Groq AI</th>
         </tr>
       </thead>
       <tbody>
         <tr>
-          <td class="td-m">Method Type</td>
-          <td class="td-rf">Supervised ML — Ensemble</td>
-          <td class="td-gr">Large Language Model (LLM)<span class="win-p">✓ Novel</span></td>
+          <td class="td-dim">Method</td>
+          <td class="td-green">Supervised ML · Ensemble</td>
+          <td class="td-violet">LLM · Zero-shot<span class="win-tag win-v">Novel</span></td>
         </tr>
         <tr>
-          <td class="td-m">Accuracy</td>
-          <td class="td-rf">~95% — fully measurable<span class="win-g">✓ Quantifiable</span></td>
-          <td class="td-gr">Qualitative — no ground truth score</td>
+          <td class="td-dim">Accuracy</td>
+          <td class="td-green">~95% measurable<span class="win-tag win-g">Quantifiable</span></td>
+          <td class="td-violet">Qualitative — no ground truth</td>
         </tr>
         <tr>
-          <td class="td-m">Training Required</td>
-          <td class="td-rf">Yes — needs labeled data</td>
-          <td class="td-gr">No training needed<span class="win-p">✓ Zero-shot</span></td>
+          <td class="td-dim">Training</td>
+          <td class="td-green">Needs labeled data</td>
+          <td class="td-violet">No training needed<span class="win-tag win-v">Zero-shot</span></td>
         </tr>
         <tr>
-          <td class="td-m">Speed</td>
-          <td class="td-rf">Fast after training — local<span class="win-g">✓ Offline</span></td>
-          <td class="td-gr">1–3 sec API latency</td>
+          <td class="td-dim">Speed</td>
+          <td class="td-green">Fast · Local<span class="win-tag win-g">Offline</span></td>
+          <td class="td-violet">1–3s API latency</td>
         </tr>
         <tr>
-          <td class="td-m">Internet Required</td>
-          <td class="td-rf">No — runs fully offline<span class="win-g">✓ Edge ready</span></td>
-          <td class="td-gr">Yes — Groq cloud API</td>
+          <td class="td-dim">Internet</td>
+          <td class="td-green">No — fully offline<span class="win-tag win-g">Edge ready</span></td>
+          <td class="td-violet">Yes — Groq cloud</td>
         </tr>
         <tr>
-          <td class="td-m">Explainability</td>
-          <td class="td-rf">Feature importance scores<span class="win-g">✓ Transparent</span></td>
-          <td class="td-gr">Natural language explanation<span class="win-p">✓ Human readable</span></td>
+          <td class="td-dim">Explainability</td>
+          <td class="td-green">Feature importance<span class="win-tag win-g">Transparent</span></td>
+          <td class="td-violet">Natural language<span class="win-tag win-v">Readable</span></td>
         </tr>
         <tr>
-          <td class="td-m">Flexibility</td>
-          <td class="td-rf">Fixed — trained appliances only</td>
-          <td class="td-gr">Any appliance — no retraining<span class="win-p">✓ Adaptable</span></td>
+          <td class="td-dim">Flexibility</td>
+          <td class="td-green">Fixed trained labels</td>
+          <td class="td-violet">Any appliance<span class="win-tag win-v">Adaptable</span></td>
         </tr>
         <tr>
-          <td class="td-m">Reproducibility</td>
-          <td class="td-rf">Deterministic — seed=42<span class="win-g">✓ Consistent</span></td>
-          <td class="td-gr">Probabilistic — varies per call</td>
+          <td class="td-dim">Reproducibility</td>
+          <td class="td-green">Deterministic · seed=42<span class="win-tag win-g">Consistent</span></td>
+          <td class="td-violet">Probabilistic</td>
         </tr>
         <tr>
-          <td class="td-m">Cost</td>
-          <td class="td-rf">Free — open source<span class="win-g">✓ No cost</span></td>
-          <td class="td-gr">API credits required</td>
+          <td class="td-dim">Cost</td>
+          <td class="td-green">Free · Open source<span class="win-tag win-g">No cost</span></td>
+          <td class="td-violet">API credits</td>
         </tr>
         <tr>
-          <td class="td-m">Scalability</td>
-          <td class="td-rf">Needs retraining for new devices</td>
-          <td class="td-gr">Scales instantly to new devices<span class="win-p">✓ Scalable</span></td>
-        </tr>
-        <tr>
-          <td class="td-m">Data Privacy</td>
-          <td class="td-rf">Data stays local<span class="win-g">✓ Private</span></td>
-          <td class="td-gr">Data sent to external API</td>
-        </tr>
-        <tr>
-          <td class="td-m">Best Use Case</td>
-          <td class="td-rf">Production NILM — known appliances</td>
-          <td class="td-gr">Exploration — unknown appliances<span class="win-p">✓ Research</span></td>
+          <td class="td-dim">Privacy</td>
+          <td class="td-green">Data stays local<span class="win-tag win-g">Private</span></td>
+          <td class="td-violet">Sent to external API</td>
         </tr>
       </tbody>
     </table>
 
-    <div style="margin-top:16px;padding:12px 14px;background:var(--surface2);border-radius:10px;border:1px solid var(--border);">
-      <div style="font-size:11px;font-family:var(--mono);color:var(--muted);margin-bottom:6px;">CONCLUSION</div>
-      <p style="font-size:12px;line-height:1.7;color:var(--text);">
-        Both methods have distinct strengths. <strong style="color:var(--green);">Random Forest</strong> excels in accuracy,
-        reproducibility, and offline deployment — ideal for production NILM systems.
-        <strong style="color:var(--purple);">Groq AI</strong> offers zero-shot flexibility and natural language reasoning —
-        ideal for exploration and unknown appliances. The choice depends on the use case:
-        <em>precision vs flexibility</em>.
-      </p>
+    <div class="conclusion">
+      <div class="conclusion-label">Conclusion</div>
+      <div class="conclusion-text">
+        Both methods have distinct strengths.
+        <strong style="color:var(--green);">Random Forest</strong> excels in accuracy, reproducibility, and offline deployment — ideal for production NILM.
+        <strong style="color:var(--violet);">Groq AI</strong> offers zero-shot flexibility and natural language reasoning — ideal for exploration and unknown appliances.
+        The optimal architecture combines both: <em>RF for precision, LLM for adaptability</em>.
+      </div>
     </div>
 
-    <!-- RF accuracy bars -->
-    <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border);">
-      <div style="font-size:11px;font-family:var(--mono);color:var(--muted);margin-bottom:12px;">
-        RANDOM FOREST — Per-Appliance Accuracy (Python sklearn, DSUAL dataset)
-      </div>
+    <!-- Accuracy Bars -->
+    <div class="acc-section">
+      <div class="acc-section-title">RF Per-Appliance Accuracy · Python sklearn · DSUAL</div>
       <div class="acc-row">
         <div class="acc-lbl">Overall</div>
-        <div class="acc-bg"><div class="acc-fill" style="width:95%;background:var(--green);"></div></div>
+        <div class="acc-track"><div class="acc-fill" style="width:95%;background:var(--green);"></div></div>
         <div class="acc-pct" style="color:var(--green);">~95%</div>
       </div>
       <div class="acc-row">
         <div class="acc-lbl">Inc. Lamp</div>
-        <div class="acc-bg"><div class="acc-fill" style="width:97%;background:var(--green);"></div></div>
+        <div class="acc-track"><div class="acc-fill" style="width:97%;background:var(--green);"></div></div>
         <div class="acc-pct" style="color:var(--green);">~97%</div>
       </div>
       <div class="acc-row">
         <div class="acc-lbl">LED Lamp</div>
-        <div class="acc-bg"><div class="acc-fill" style="width:93%;background:var(--cyan);"></div></div>
+        <div class="acc-track"><div class="acc-fill" style="width:93%;background:var(--cyan);"></div></div>
         <div class="acc-pct" style="color:var(--cyan);">~93%</div>
       </div>
       <div class="acc-row">
         <div class="acc-lbl">Fan</div>
-        <div class="acc-bg"><div class="acc-fill" style="width:96%;background:var(--cyan);"></div></div>
+        <div class="acc-track"><div class="acc-fill" style="width:96%;background:var(--cyan);"></div></div>
         <div class="acc-pct" style="color:var(--cyan);">~96%</div>
       </div>
       <div class="acc-row">
         <div class="acc-lbl">Laptop</div>
-        <div class="acc-bg"><div class="acc-fill" style="width:94%;background:var(--cyan);"></div></div>
+        <div class="acc-track"><div class="acc-fill" style="width:94%;background:var(--cyan);"></div></div>
         <div class="acc-pct" style="color:var(--cyan);">~94%</div>
       </div>
       <div class="acc-row">
         <div class="acc-lbl">Fryer</div>
-        <div class="acc-bg"><div class="acc-fill" style="width:92%;background:var(--amber);"></div></div>
+        <div class="acc-track"><div class="acc-fill" style="width:92%;background:var(--amber);"></div></div>
         <div class="acc-pct" style="color:var(--amber);">~92%</div>
       </div>
-      <div style="margin-top:10px;font-size:10px;color:var(--muted);">
-        n_estimators=100 · random_state=42 · stratified split · features: voltage, current, power_active, frequency, power_factor
+      <div style="margin-top:10px;font-family:var(--mono);font-size:10px;color:var(--text3);">
+        n_estimators=100 · random_state=42 · features: voltage, current, power, frequency, pf
       </div>
     </div>
   </div>
 </div>
 
 <!-- FOOTER -->
-<div style="text-align:center;padding-top:16px;font-size:11px;color:var(--muted);">
-  <span style="font-family:var(--mono);">VEAM</span> · Projet de Fin d'Etudes ·
-  Master Electrotechnique Industrielle · Universite de Souk Ahras · 2025-2026
-</div>
+<footer>
+  VEAM · Projet de Fin d'Études · Master Électrotechnique Industrielle · Université de Souk Ahras · 2025–2026
+</footer>
 
 </div><!-- wrap -->
+
 <script>
-// ═══════════════════════════════════════════
+// ═══════════════════════════════════
 // APPLIANCE META
-// ═══════════════════════════════════════════
-const APPLIANCE_INFO = {
-  'Incandescent Lamp': { icon:'🔆', color:'#ff5f6d' },
-  'LED Lamp':          { icon:'💡', color:'#a78bfa' },
-  'Fan':               { icon:'🌀', color:'#00d4ff' },
-  'Laptop':            { icon:'💻', color:'#00e5a0' },
-  'Fryer':             { icon:'🍳', color:'#ffb347' },
+// ═══════════════════════════════════
+const APPLIANCES = {
+  'Incandescent Lamp': { icon: '🔆', color: '#f87171' },
+  'LED Lamp':          { icon: '💡', color: '#a78bfa' },
+  'Fan':               { icon: '🌀', color: '#22d3ee' },
+  'Laptop':            { icon: '💻', color: '#4ade80' },
+  'Fryer':             { icon: '🍳', color: '#fbbf24' },
 };
 
-// ═══════════════════════════════════════════
+// ═══════════════════════════════════
 // DECISION TREE
-// ═══════════════════════════════════════════
+// ═══════════════════════════════════
 class DTree {
-  constructor(){ this.feat=null;this.thr=null;this.left=null;this.right=null;this.label=null; }
-  static train(X,y,depth=0,maxD=8,minS=5,rng){
-    const t=new DTree();
-    const cls=[...new Set(y)];
-    if(cls.length===1||y.length<=minS||depth>=maxD){
-      const c={};y.forEach(v=>c[v]=(c[v]||0)+1);
-      t.label=Object.keys(c).reduce((a,b)=>c[a]>c[b]?a:b);
+  constructor() { this.feat=null; this.thr=null; this.left=null; this.right=null; this.label=null; }
+  static train(X, y, depth=0, maxD=8, minS=5, rng) {
+    const t = new DTree();
+    const cls = [...new Set(y)];
+    if (cls.length === 1 || y.length <= minS || depth >= maxD) {
+      const c = {}; y.forEach(v => c[v] = (c[v]||0)+1);
+      t.label = Object.keys(c).reduce((a,b) => c[a]>c[b]?a:b);
       return t;
     }
-    const nF=Math.round(Math.sqrt(X[0].length));
-    const allF=[...Array(X[0].length).keys()];
-    const fIdx=[];
-    while(fIdx.length<nF){const f=allF[Math.floor(rng()*allF.length)];if(!fIdx.includes(f))fIdx.push(f);}
-    let bG=Infinity,bF=-1,bT=0,bLX=[],bRX=[],bLy=[],bRy=[];
-    for(const fi of fIdx){
-      const vals=[...new Set(X.map(r=>r[fi]))].sort((a,b)=>a-b);
-      for(let vi=0;vi<vals.length-1;vi++){
-        const thr=(vals[vi]+vals[vi+1])/2;
+    const nF = Math.round(Math.sqrt(X[0].length));
+    const allF = [...Array(X[0].length).keys()];
+    const fIdx = [];
+    while (fIdx.length < nF) { const f = allF[Math.floor(rng()*allF.length)]; if (!fIdx.includes(f)) fIdx.push(f); }
+    let bG=Infinity, bF=-1, bT=0, bLX=[], bRX=[], bLy=[], bRy=[];
+    for (const fi of fIdx) {
+      const vals = [...new Set(X.map(r=>r[fi]))].sort((a,b)=>a-b);
+      for (let vi=0; vi<vals.length-1; vi++) {
+        const thr = (vals[vi]+vals[vi+1])/2;
         const LX=[],RX=[],Ly=[],Ry=[];
-        X.forEach((r,i)=>{if(r[fi]<=thr){LX.push(r);Ly.push(y[i]);}else{RX.push(r);Ry.push(y[i]);}});
-        if(!LX.length||!RX.length) continue;
-        const g=gini(Ly)*Ly.length/y.length+gini(Ry)*Ry.length/y.length;
-        if(g<bG){bG=g;bF=fi;bT=thr;bLX=LX;bRX=RX;bLy=Ly;bRy=Ry;}
+        X.forEach((r,i) => { if(r[fi]<=thr){LX.push(r);Ly.push(y[i]);}else{RX.push(r);Ry.push(y[i]);} });
+        if (!LX.length || !RX.length) continue;
+        const g = gini(Ly)*Ly.length/y.length + gini(Ry)*Ry.length/y.length;
+        if (g < bG) { bG=g; bF=fi; bT=thr; bLX=LX; bRX=RX; bLy=Ly; bRy=Ry; }
       }
     }
-    if(bF===-1){const c={};y.forEach(v=>c[v]=(c[v]||0)+1);t.label=Object.keys(c).reduce((a,b)=>c[a]>c[b]?a:b);return t;}
-    t.feat=bF;t.thr=bT;
-    t.left=DTree.train(bLX,bLy,depth+1,maxD,minS,rng);
-    t.right=DTree.train(bRX,bRy,depth+1,maxD,minS,rng);
+    if (bF === -1) { const c={}; y.forEach(v=>c[v]=(c[v]||0)+1); t.label=Object.keys(c).reduce((a,b)=>c[a]>c[b]?a:b); return t; }
+    t.feat=bF; t.thr=bT;
+    t.left  = DTree.train(bLX, bLy, depth+1, maxD, minS, rng);
+    t.right = DTree.train(bRX, bRy, depth+1, maxD, minS, rng);
     return t;
   }
-  predict(x){return this.label!==null?this.label:(x[this.feat]<=this.thr?this.left.predict(x):this.right.predict(x));}
+  predict(x) { return this.label!==null ? this.label : (x[this.feat]<=this.thr ? this.left.predict(x) : this.right.predict(x)); }
 }
 
-function gini(labels){
-  if(!labels.length) return 0;
-  const c={};labels.forEach(l=>c[l]=(c[l]||0)+1);
-  return 1-Object.values(c).reduce((s,v)=>s+(v/labels.length)**2,0);
+function gini(labels) {
+  if (!labels.length) return 0;
+  const c = {}; labels.forEach(l => c[l]=(c[l]||0)+1);
+  return 1 - Object.values(c).reduce((s,v) => s+(v/labels.length)**2, 0);
 }
 
-function mkRng(seed){
-  return ()=>{seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};
+function mkRng(seed) {
+  return () => { seed|=0; seed=seed+0x6D2B79F5|0; let t=Math.imul(seed^seed>>>15,1|seed); t=t+Math.imul(t^t>>>7,61|t)^t; return((t^t>>>14)>>>0)/4294967296; };
 }
 
-// ═══════════════════════════════════════════
+// ═══════════════════════════════════
 // STATE
-// ═══════════════════════════════════════════
+// ═══════════════════════════════════
 let rfTrees=[], rfAccuracy=0, rfTestPredictions=[];
-
-function rowToFeatures(r){ return [r.voltage||230, r.current||0, r.power||0, r.frequency||50, r.pf||0]; }
-
-function setLog(msg,cls='linf',id='rfLog'){
-  document.getElementById(id).innerHTML=`<span class="${cls}">> ${msg}</span>`;
-}
-
-// ═══════════════════════════════════════════
-// PROGRESS HELPERS
-// ═══════════════════════════════════════════
 let trainStart=0;
 
-function showProgress(){document.getElementById('progressWrap').style.display='block';}
-function hideProgress(){document.getElementById('progressWrap').style.display='none';}
+function rowToFeatures(r) { return [r.voltage||230, r.current||0, r.power||0, r.frequency||50, r.pf||0]; }
 
-function updateProgress(pct, label, stepIdx){
-  document.getElementById('progressFill').style.width=pct+'%';
-  document.getElementById('progressLabel').textContent=label;
-  // ETA
-  const elapsed=(Date.now()-trainStart)/1000;
-  if(pct>5&&pct<100){
-    const total=elapsed/(pct/100);
-    const left=Math.max(0,total-elapsed);
-    document.getElementById('progressEta').textContent=
-      left>60?`~${Math.ceil(left/60)}m remaining`:`~${Math.ceil(left)}s remaining`;
-  } else if(pct>=100){
-    document.getElementById('progressEta').textContent='Done!';
+function setLog(msg, cls='inf', id='rfLog') {
+  document.getElementById(id).innerHTML = `<span class="${cls}">> ${msg}</span>`;
+}
+
+function showProgress() { document.getElementById('progressWrap').style.display='block'; }
+function hideProgress() { document.getElementById('progressWrap').style.display='none'; }
+
+function updateProgress(pct, label, stepIdx) {
+  document.getElementById('progressFill').style.width = pct+'%';
+  document.getElementById('progressLabel').textContent = label;
+  const elapsed = (Date.now()-trainStart)/1000;
+  if (pct>5 && pct<100) {
+    const total = elapsed/(pct/100);
+    const left = Math.max(0, total-elapsed);
+    document.getElementById('progressEta').textContent = left>60 ? `~${Math.ceil(left/60)}m left` : `~${Math.ceil(left)}s left`;
+  } else if (pct >= 100) {
+    document.getElementById('progressEta').textContent = 'Done!';
   }
-  // step indicators
-  const steps=['ps0','ps1','ps2','ps3','ps4','ps5'];
-  steps.forEach((id,i)=>{
-    const el=document.getElementById(id);
-    el.className='progress-step'+(i<stepIdx?' done':i===stepIdx?' active':'');
+  ['ps0','ps1','ps2','ps3','ps4','ps5'].forEach((id,i) => {
+    const el = document.getElementById(id);
+    el.className = 'ps' + (i<stepIdx?' done':i===stepIdx?' active':'');
   });
 }
 
-// ═══════════════════════════════════════════
-// RUN RANDOM FOREST — async with yielding
-// ═══════════════════════════════════════════
-async function runRandomForest(){
-  const btn=document.getElementById('rfBtn');
-  btn.disabled=true;
-  btn.innerHTML='<span class="sp"></span>Training...';
+// ═══════════════════════════════════
+// RUN RANDOM FOREST
+// ═══════════════════════════════════
+async function runRandomForest() {
+  const btn = document.getElementById('rfBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin"></span> Training...';
   showProgress();
-  trainStart=Date.now();
-  updateProgress(2,'Preparing training data...',0);
-  setLog('Loading 19,084 training samples...','linf','rfLog');
-
+  trainStart = Date.now();
+  updateProgress(2, 'Preparing training data...', 0);
+  setLog('Loading 19,084 training samples...', 'inf', 'rfLog');
   await sleep(30);
 
-  const trainX=VEAM_TRAIN.map(rowToFeatures);
-  const trainY=VEAM_TRAIN.map(r=>r.label);
-  const testX=VEAM_TEST.map(rowToFeatures);
-  const testY=VEAM_TEST.map(r=>r.label);
-  const n=trainX.length;
+  const trainX = VEAM_TRAIN.map(rowToFeatures);
+  const trainY = VEAM_TRAIN.map(r => r.label);
+  const testX  = VEAM_TEST.map(rowToFeatures);
+  const testY  = VEAM_TEST.map(r => r.label);
+  const n = trainX.length;
 
-  rfTrees=[];
-  const TOTAL=100;
-  const BATCH=5; // trees per async chunk
+  rfTrees = [];
+  const TOTAL = 100, BATCH = 5;
 
-  for(let t=0;t<TOTAL;t+=BATCH){
-    for(let b=t;b<Math.min(t+BATCH,TOTAL);b++){
-      const rng=mkRng(42+b*7919);
-      const idxs=[];for(let i=0;i<n;i++) idxs.push(Math.floor(rng()*n));
-      rfTrees.push(DTree.train(idxs.map(i=>trainX[i]),idxs.map(i=>trainY[i]),0,8,5,rng));
+  for (let t=0; t<TOTAL; t+=BATCH) {
+    for (let b=t; b<Math.min(t+BATCH,TOTAL); b++) {
+      const rng = mkRng(42+b*7919);
+      const idxs = []; for (let i=0;i<n;i++) idxs.push(Math.floor(rng()*n));
+      rfTrees.push(DTree.train(idxs.map(i=>trainX[i]), idxs.map(i=>trainY[i]), 0, 8, 5, rng));
     }
-    const pct=Math.round((Math.min(t+BATCH,TOTAL)/TOTAL)*85)+5;
-    const stepIdx=t<25?1:t<50?2:t<75?3:4;
-    updateProgress(pct,`Training tree ${Math.min(t+BATCH,TOTAL)} / ${TOTAL}...`,stepIdx);
-    setLog(`Training... ${Math.min(t+BATCH,TOTAL)}/${TOTAL} trees done`,'linf','rfLog');
-    await sleep(0); // yield to browser
+    const pct = Math.round((Math.min(t+BATCH,TOTAL)/TOTAL)*85)+5;
+    const stepIdx = t<25?1:t<50?2:t<75?3:4;
+    updateProgress(pct, `Training tree ${Math.min(t+BATCH,TOTAL)} / ${TOTAL}...`, stepIdx);
+    setLog(`Training... ${Math.min(t+BATCH,TOTAL)}/${TOTAL} trees`, 'inf', 'rfLog');
+    await sleep(0);
   }
 
-  updateProgress(92,'Evaluating on test set...',5);
-  setLog('Classifying 4,771 test readings...','linf','rfLog');
+  updateProgress(92, 'Evaluating on test set...', 5);
+  setLog('Classifying 4,771 test readings...', 'inf', 'rfLog');
   await sleep(30);
 
-  rfTestPredictions=testX.map(x=>{
-    const v={};
-    rfTrees.forEach(tree=>{const p=tree.predict(x);v[p]=(v[p]||0)+1;});
-    return Object.keys(v).reduce((a,b)=>v[a]>v[b]?a:b);
+  rfTestPredictions = testX.map(x => {
+    const v = {};
+    rfTrees.forEach(tree => { const p=tree.predict(x); v[p]=(v[p]||0)+1; });
+    return Object.keys(v).reduce((a,b) => v[a]>v[b]?a:b);
   });
 
-  let correct=0;
-  rfTestPredictions.forEach((p,i)=>{if(p===testY[i])correct++;});
-  rfAccuracy=correct/testY.length;
+  let correct = 0;
+  rfTestPredictions.forEach((p,i) => { if (p===testY[i]) correct++; });
+  rfAccuracy = correct/testY.length;
 
-  const classCorrect={},classTotal={};
-  testY.forEach((y,i)=>{
+  const classCorrect={}, classTotal={};
+  testY.forEach((y,i) => {
     classTotal[y]=(classTotal[y]||0)+1;
-    if(rfTestPredictions[i]===y)classCorrect[y]=(classCorrect[y]||0)+1;
+    if (rfTestPredictions[i]===y) classCorrect[y]=(classCorrect[y]||0)+1;
   });
 
   const dist={};
-  rfTestPredictions.forEach(p=>dist[p]=(dist[p]||0)+1);
+  rfTestPredictions.forEach(p => dist[p]=(dist[p]||0)+1);
 
-  updateProgress(100,`Done! Accuracy: ${(rfAccuracy*100).toFixed(2)}%`,5);
-  const elapsed=((Date.now()-trainStart)/1000).toFixed(1);
-  setLog(`Training complete in ${elapsed}s — Accuracy: ${(rfAccuracy*100).toFixed(2)}% on 4,771 test readings`,'lok','rfLog');
+  updateProgress(100, `Done! Accuracy: ${(rfAccuracy*100).toFixed(2)}%`, 5);
+  const elapsed = ((Date.now()-trainStart)/1000).toFixed(1);
+  setLog(`Done in ${elapsed}s — Accuracy: ${(rfAccuracy*100).toFixed(2)}% on 4,771 test readings`, 'ok', 'rfLog');
 
   await sleep(400);
   hideProgress();
-
-  renderRFResults(dist,testX.length,classCorrect,classTotal);
-  btn.disabled=false;
-  btn.innerHTML='🌲 Re-run Random Forest';
-  document.getElementById('groqBtn').disabled=false;
-  setLog('Now click "Run Groq AI Analysis" to compare results','linf','groqLog');
+  renderRFResults(dist, testX.length, classCorrect, classTotal);
+  btn.disabled = false;
+  btn.innerHTML = '🌲 Re-run';
+  document.getElementById('groqBtn').disabled = false;
+  setLog('Now click "Run Groq AI" to compare', 'inf', 'groqLog');
 }
 
-function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-function renderRFResults(dist,total,classCorrect,classTotal){
-  const area=document.getElementById('rfResults');
-  const sorted=Object.entries(dist).sort((a,b)=>b[1]-a[1]);
-  area.innerHTML=`
-  <div style="margin-top:4px;">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-      <span style="font-family:var(--mono);font-size:10px;color:var(--muted);">TEST SET — ${total} READINGS CLASSIFIED</span>
-      <span style="font-family:var(--mono);font-size:14px;color:var(--green);font-weight:700;">${(rfAccuracy*100).toFixed(2)}% Accuracy</span>
+function renderRFResults(dist, total, classCorrect, classTotal) {
+  const sorted = Object.entries(dist).sort((a,b) => b[1]-a[1]);
+  document.getElementById('rfResults').innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin:16px 0 12px;">
+      <span style="font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:.5px;">TEST SET — ${total} READINGS</span>
+      <span style="font-family:var(--display);font-size:16px;font-weight:800;color:var(--green);">${(rfAccuracy*100).toFixed(2)}% Accuracy</span>
     </div>
     <div class="app-grid">
-    ${sorted.map(([label,count])=>{
-      const info=APPLIANCE_INFO[label]||{icon:'🔌',color:'#64748b'};
-      const pct=(count/total*100).toFixed(1);
-      const acc=classCorrect[label]?((classCorrect[label]/classTotal[label])*100).toFixed(1):'—';
-      const accNum=classCorrect[label]?(classCorrect[label]/classTotal[label]):0;
-      const accColor=accNum>=0.90?'var(--green)':accNum>=0.75?'var(--amber)':'var(--red)';
+    ${sorted.map(([label, count]) => {
+      const info = APPLIANCES[label] || { icon:'🔌', color:'#52525b' };
+      const pct = (count/total*100).toFixed(1);
+      const accNum = classCorrect[label] ? (classCorrect[label]/classTotal[label]) : 0;
+      const accPct = classCorrect[label] ? (accNum*100).toFixed(1) : '—';
+      const accColor = accNum>=.90?'var(--green)':accNum>=.75?'var(--amber)':'var(--red)';
       return `
-      <div class="app-card">
+      <div class="app-tile">
         <div class="app-top">
           <div class="app-dot" style="background:${info.color};"></div>
-          <span style="font-size:15px;">${info.icon}</span>
+          <span class="app-emoji">${info.icon}</span>
           <span class="app-name">${label}</span>
-          <span class="app-count">${count} samples</span>
+          <span class="app-count">${count}</span>
         </div>
         <div class="app-metrics">
-          <div class="met-box"><div class="met-val" style="color:${info.color};">${pct}%</div><div class="met-lbl">Share</div></div>
-          <div class="met-box"><div class="met-val" style="color:${accColor};">${acc}%</div><div class="met-lbl">Accuracy</div></div>
-          <div class="met-box"><div class="met-val" style="color:var(--cyan);">${count}</div><div class="met-lbl">Predicted</div></div>
+          <div class="met">
+            <div class="met-val" style="color:${info.color};">${pct}%</div>
+            <div class="met-lbl">Share</div>
+          </div>
+          <div class="met">
+            <div class="met-val" style="color:${accColor};">${accPct}%</div>
+            <div class="met-lbl">Accuracy</div>
+          </div>
+          <div class="met">
+            <div class="met-val" style="color:var(--cyan);">${count}</div>
+            <div class="met-lbl">Predicted</div>
+          </div>
         </div>
-        <div class="bar-bg"><div class="bar-fill" style="width:0%;background:${info.color};" data-t="${pct}"></div></div>
-        <div class="bar-pct">${pct}% of test set</div>
+        <div class="bar-wrap">
+          <div class="bar-track">
+            <div class="bar-fill" style="width:0%;background:${info.color};" data-t="${pct}"></div>
+          </div>
+          <div class="bar-label">${pct}% of test set</div>
+        </div>
       </div>`;
     }).join('')}
-    </div>
-  </div>`;
-  requestAnimationFrame(()=>{
-    document.querySelectorAll('.bar-fill[data-t]').forEach(el=>el.style.width=el.dataset.t+'%');
+    </div>`;
+  requestAnimationFrame(() => {
+    document.querySelectorAll('.bar-fill[data-t]').forEach(el => el.style.width = el.dataset.t+'%');
   });
 }
 
-// ═══════════════════════════════════════════
+// ═══════════════════════════════════
 // RUN GROQ AI
-// ═══════════════════════════════════════════
-async function runGroqAI(){
-  if(!rfTrees.length){setLog('Run Random Forest first','lwrn','groqLog');return;}
-  const btn=document.getElementById('groqBtn');
-  btn.disabled=true;
-  btn.innerHTML='<span class="sp spp"></span>Asking Groq AI...';
-  setLog('Sending test set statistics to Groq AI (LLaMA 3.3 70B)...','linf','groqLog');
-  document.getElementById('groqResults').innerHTML='';
+// ═══════════════════════════════════
+async function runGroqAI() {
+  if (!rfTrees.length) { setLog('Run Random Forest first', 'warn', 'groqLog'); return; }
+  const btn = document.getElementById('groqBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin"></span> Asking Groq AI...';
+  setLog('Sending test set statistics to Groq AI (LLaMA 3.3 70B)...', 'inf', 'groqLog');
+  document.getElementById('groqResults').innerHTML = '';
 
-  const rows=VEAM_TEST;
-  const avgP=(rows.reduce((s,r)=>s+r.power,0)/rows.length).toFixed(2);
-  const avgI=(rows.reduce((s,r)=>s+r.current,0)/rows.length).toFixed(4);
-  const avgPF=(rows.reduce((s,r)=>s+r.pf,0)/rows.length).toFixed(4);
-  const avgV=(rows.reduce((s,r)=>s+r.voltage,0)/rows.length).toFixed(2);
-  const avgF=(rows.reduce((s,r)=>s+(r.frequency||50),0)/rows.length).toFixed(2);
-  const minP=Math.min(...rows.map(r=>r.power)).toFixed(1);
-  const maxP=Math.max(...rows.map(r=>r.power)).toFixed(1);
-  const step=Math.floor(rows.length/5);
-  const samples=[0,1,2,3,4].map(i=>rows[Math.min(i*step,rows.length-1)]);
+  const rows = VEAM_TEST;
+  const avgP  = (rows.reduce((s,r)=>s+r.power,0)/rows.length).toFixed(2);
+  const avgI  = (rows.reduce((s,r)=>s+r.current,0)/rows.length).toFixed(4);
+  const avgPF = (rows.reduce((s,r)=>s+r.pf,0)/rows.length).toFixed(4);
+  const avgV  = (rows.reduce((s,r)=>s+r.voltage,0)/rows.length).toFixed(2);
+  const avgF  = (rows.reduce((s,r)=>s+(r.frequency||50),0)/rows.length).toFixed(2);
+  const minP  = Math.min(...rows.map(r=>r.power)).toFixed(1);
+  const maxP  = Math.max(...rows.map(r=>r.power)).toFixed(1);
+  const step  = Math.floor(rows.length/5);
+  const samples = [0,1,2,3,4].map(i => rows[Math.min(i*step, rows.length-1)]);
 
-  const prompt=`You are a NILM (Non-Intrusive Load Monitoring) expert. Analyze this real electrical data from the DSUAL dataset (University of Almeria, Spain).
+  const prompt = `You are a NILM (Non-Intrusive Load Monitoring) expert. Analyze this real electrical data from the DSUAL dataset (University of Almeria, Spain).
 
 TEST SET: ${rows.length} real readings from a smart energy meter.
 
@@ -746,110 +1519,107 @@ APPLIANCES IN THIS DATASET:
 - Laptop (typical: ~11W, PF~0.75)
 - Fryer (typical: ~16W, PF~0.73)
 
-Based on the power signatures in this test set, estimate the percentage of readings belonging to each appliance.
-Percentages must sum to 100%.
-
-Respond ONLY with a valid JSON array (no explanation, no markdown):
+Based on the power signatures, estimate the percentage of readings per appliance. Must sum to 100%.
+Respond ONLY with a valid JSON array:
 [{"name":"Appliance Name","percentage":35,"confidence":"High"}]`;
 
-  try{
-    const res=await fetch('/api/gemini',{
-      method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({prompt})
+  try {
+    const res = await fetch('/api/gemini', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt })
     });
-    if(!res.ok) throw new Error(`API error ${res.status}`);
-    const data=await res.json();
-    const raw=data.text||'';
-    setLog('Groq AI responded — parsing result...','lok','groqLog');
+    if (!res.ok) throw new Error(`API error ${res.status}`);
+    const data = await res.json();
+    const raw = data.text || '';
+    setLog('Groq AI responded — parsing result...', 'ok', 'groqLog');
 
-    let groqData=null;
-    try{const m=raw.match(/\[[\s\S]*\]/);if(m)groqData=JSON.parse(m[0]);}catch(e){}
+    let groqData = null;
+    try { const m = raw.match(/\[[\s\S]*\]/); if (m) groqData = JSON.parse(m[0]); } catch(e) {}
 
-    if(groqData&&Array.isArray(groqData)&&groqData.length>0){
+    if (groqData && Array.isArray(groqData) && groqData.length > 0) {
       renderGroqResults(groqData);
       renderSideBySide(groqData);
     } else {
-      document.getElementById('groqResults').innerHTML=`
+      document.getElementById('groqResults').innerHTML = `
         <div class="groq-box">
-          <div class="groq-title">Groq AI Response (Raw)</div>
+          <div class="groq-box-title">Groq AI Response (Raw)</div>
           <div class="groq-raw">${raw}</div>
         </div>`;
-      renderSideBySide(null,raw);
+      renderSideBySide(null, raw);
     }
-  }catch(e){
-    setLog('Error: '+e.message,'lwrn','groqLog');
-  }finally{
-    btn.disabled=false;
-    btn.innerHTML='🤖 Re-run Groq AI';
+  } catch(e) {
+    setLog('Error: ' + e.message, 'warn', 'groqLog');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '🤖 Re-run Groq AI';
   }
 }
 
-function renderGroqResults(data){
-  const confC={High:'var(--green)',Medium:'var(--amber)',Low:'var(--red)'};
-  document.getElementById('groqResults').innerHTML=`
+function renderGroqResults(data) {
+  const confColor = { High:'var(--green)', Medium:'var(--amber)', Low:'var(--red)' };
+  document.getElementById('groqResults').innerHTML = `
   <div class="groq-box">
-    <div class="groq-title">Groq AI — Test Set Classification (${VEAM_TEST.length} readings)</div>
-    ${data.map(a=>{
-      const info=APPLIANCE_INFO[a.name]||{icon:'🔌',color:'#64748b'};
-      const cc=confC[a.confidence]||'var(--muted)';
+    <div class="groq-box-title">Groq AI — Test Set Classification (${VEAM_TEST.length} readings)</div>
+    ${data.map(a => {
+      const info = APPLIANCES[a.name] || { icon:'🔌', color:'#52525b' };
+      const cc = confColor[a.confidence] || 'var(--text3)';
       return `<div class="groq-row">
-        <span class="groq-icon">${info.icon}</span>
+        <span class="groq-emoji">${info.icon}</span>
         <span class="groq-name">${a.name}</span>
-        <div class="groq-bar-bg"><div class="groq-bar-fill" style="width:0%" data-t="${a.percentage}"></div></div>
+        <div class="groq-bar-track"><div class="groq-bar-fill" style="width:0%" data-t="${a.percentage}"></div></div>
         <span class="groq-pct">${a.percentage}%</span>
-        <span class="conf" style="background:${cc}18;color:${cc};border:1px solid ${cc};">${a.confidence||'—'}</span>
+        <span class="conf-badge" style="color:${cc};border-color:${cc};background:${cc}18;">${a.confidence||'—'}</span>
       </div>`;
     }).join('')}
   </div>`;
-  requestAnimationFrame(()=>{
-    document.querySelectorAll('.groq-bar-fill[data-t]').forEach(el=>el.style.width=el.dataset.t+'%');
+  requestAnimationFrame(() => {
+    document.querySelectorAll('.groq-bar-fill[data-t]').forEach(el => el.style.width = el.dataset.t+'%');
   });
 }
 
-function renderSideBySide(groqData,rawText){
-  const card=document.getElementById('sbsCard');
-  card.style.display='block';
+function renderSideBySide(groqData, rawText) {
+  const card = document.getElementById('sbsCard');
+  card.style.display = 'block';
 
-  const dist={};rfTestPredictions.forEach(p=>dist[p]=(dist[p]||0)+1);
-  const total=rfTestPredictions.length;
-  const rfSorted=Object.entries(dist).sort((a,b)=>b[1]-a[1]);
+  const dist = {}; rfTestPredictions.forEach(p => dist[p]=(dist[p]||0)+1);
+  const total = rfTestPredictions.length;
+  const sorted = Object.entries(dist).sort((a,b) => b[1]-a[1]);
 
-  document.getElementById('rfSbs').innerHTML=rfSorted.map(([label,count])=>{
-    const info=APPLIANCE_INFO[label]||{icon:'🔌'};
+  document.getElementById('rfSbs').innerHTML = sorted.map(([label, count]) => {
+    const info = APPLIANCES[label] || { icon:'🔌' };
     return `<div class="sbs-row">
-      <span>${info.icon} ${label}</span>
+      <span style="display:flex;align-items:center;gap:6px;">${info.icon} <span style="font-size:12px;">${label}</span></span>
       <span style="font-family:var(--mono);font-size:11px;color:var(--green);font-weight:700;">${(count/total*100).toFixed(1)}%</span>
     </div>`;
   }).join('');
 
-  if(groqData){
-    document.getElementById('groqSbs').innerHTML=groqData.map(a=>{
-      const info=APPLIANCE_INFO[a.name]||{icon:'🔌'};
+  if (groqData) {
+    document.getElementById('groqSbs').innerHTML = groqData.map(a => {
+      const info = APPLIANCES[a.name] || { icon:'🔌' };
       return `<div class="sbs-row">
-        <span>${info.icon} ${a.name}</span>
-        <span style="font-family:var(--mono);font-size:11px;color:var(--purple);font-weight:700;">${a.percentage}%</span>
+        <span style="display:flex;align-items:center;gap:6px;">${info.icon} <span style="font-size:12px;">${a.name}</span></span>
+        <span style="font-family:var(--mono);font-size:11px;color:var(--violet);font-weight:700;">${a.percentage}%</span>
       </div>`;
     }).join('');
-  } else {
-    document.getElementById('groqSbs').innerHTML=`<div style="font-size:11px;color:var(--muted);line-height:1.6;">${(rawText||'').substring(0,300)}</div>`;
-  }
 
-  if(groqData){
-    const rfNames=new Set(rfSorted.filter(([,c])=>c/total>0.05).map(([l])=>l));
-    const grNames=new Set(groqData.filter(a=>a.percentage>5).map(a=>a.name));
-    const inter=[...rfNames].filter(n=>grNames.has(n));
-    const agree=Math.round(inter.length/Math.max(rfNames.size,grNames.size)*100);
-    const isHigh=agree>=60;
-    document.getElementById('winnerDiv').innerHTML=`
-    <div class="winner" style="background:${isHigh?'rgba(0,229,160,.06)':'rgba(255,179,71,.06)'};border-color:${isHigh?'var(--green)':'var(--amber)'};">
-      <div class="winner-title">Agreement Score</div>
-      <div class="winner-name" style="color:${isHigh?'var(--green)':'var(--amber)'};">${agree}% Match</div>
-      <div class="winner-desc">${inter.length>0?'Both methods agree on: '+inter.join(', '):'Methods show different classification patterns'}</div>
-      <div style="margin-top:10px;font-size:11px;color:var(--muted);">
-        RF: ${(rfAccuracy*100).toFixed(2)}% measurable accuracy · Groq AI: qualitative reasoning, no ground truth score
-      </div>
+    const rfNames = new Set(sorted.filter(([,c])=>c/total>0.05).map(([l])=>l));
+    const grNames = new Set(groqData.filter(a=>a.percentage>5).map(a=>a.name));
+    const inter = [...rfNames].filter(n => grNames.has(n));
+    const agree = Math.round(inter.length/Math.max(rfNames.size, grNames.size)*100);
+    const isHigh = agree >= 60;
+    const col = isHigh ? 'var(--green)' : 'var(--amber)';
+
+    document.getElementById('winnerDiv').innerHTML = `
+    <div class="agreement" style="background:${col}08;border-color:${col}40;">
+      <div class="agreement-label">Agreement Score</div>
+      <div class="agreement-score" style="color:${col};">${agree}% Match</div>
+      <div class="agreement-desc">${inter.length>0 ? 'Both agree on: '+inter.join(', ') : 'Different classification patterns'}</div>
+      <div class="agreement-footnote">RF: ${(rfAccuracy*100).toFixed(2)}% measurable accuracy · Groq AI: qualitative reasoning</div>
     </div>`;
-    card.scrollIntoView({behavior:'smooth',block:'start'});
+    card.scrollIntoView({ behavior:'smooth', block:'start' });
+  } else {
+    document.getElementById('groqSbs').innerHTML = `<div style="font-size:11px;color:var(--text2);line-height:1.7;">${(rawText||'').substring(0,300)}</div>`;
   }
 }
 </script>
