@@ -97,14 +97,14 @@ header {
 .logo-mark {
   width: 40px;
   height: 40px;
-  border-radius: 10px;
-  background: var(--cyan);
+  border-radius: 0;
+  background: transparent;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 18px;
   flex-shrink: 0;
-  box-shadow: 0 0 24px rgba(34,211,238,.3);
+  box-shadow: none;
 }
 
 .logo-name {
@@ -1416,7 +1416,7 @@ async function runRandomForest() {
   const n = trainX.length;
 
   rfTrees = [];
-  const TOTAL = 100, BATCH = 5;
+  const TOTAL = 100, BATCH = 25;
 
   for (let t=0; t<TOTAL; t+=BATCH) {
     for (let b=t; b<Math.min(t+BATCH,TOTAL); b++) {
