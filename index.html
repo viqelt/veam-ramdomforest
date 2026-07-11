@@ -1202,7 +1202,7 @@ footer {
         <tr>
           <td class="td-dim">Accuracy</td>
           <td class="td-green">~95% measurable<span class="win-tag win-g">Quantifiable</span></td>
-          <td class="td-violet">Qualitative — no ground truth</td>
+          <td class="td-violet" id="groqAccCell">Not yet run — click "Run Groq AI Analysis"</td>
         </tr>
         <tr>
           <td class="td-dim">Training</td>
@@ -1368,6 +1368,7 @@ function mkRng(seed) {
 // STATE
 // ═══════════════════════════════════
 let rfTrees=[], rfAccuracy=0, rfTestPredictions=[];
+let groqAccuracy=0;
 let trainStart=0;
 
 function rowToFeatures(r) { return [r.voltage||230, r.current||0, r.power||0, r.frequency||50, r.pf||0]; }
@@ -1522,49 +1523,57 @@ function renderRFResults(dist, total, classCorrect, classTotal) {
 // ═══════════════════════════════════
 // RUN GROQ AI
 // ═══════════════════════════════════
+// Methodology fix: instead of handing Groq ONE population-level average over all
+// 4,771 mixed readings and asking it to guess a % share per appliance (a task with
+// no real signal to reason from — hence the suspiciously round outputs), Groq is
+// now given a STRATIFIED SAMPLE of individual readings (equal count per appliance,
+// fixed seed for reproducibility) and asked to classify EACH ONE independently by
+// its own power/current/PF/voltage — the exact same per-instance task Random Forest
+// performs. This makes Groq's accuracy genuinely measurable against ground truth,
+// on an identical sample RF is also evaluated on, for a fair side-by-side.
 async function runGroqAI() {
   if (!rfTrees.length) { setLog('Run Random Forest first', 'warn', 'groqLog'); return; }
   const btn = document.getElementById('groqBtn');
   btn.disabled = true;
   btn.innerHTML = '<span class="spin"></span> Asking Groq AI...';
-  setLog('Sending test set statistics to Groq AI (LLaMA 3.3 70B)...', 'inf', 'groqLog');
+  setLog('Building a balanced sample and sending individual readings to Groq AI (LLaMA 3.3 70B)...', 'inf', 'groqLog');
   document.getElementById('groqResults').innerHTML = '';
 
-  const rows = VEAM_TEST;
-  const avgP  = (rows.reduce((s,r)=>s+r.power,0)/rows.length).toFixed(2);
-  const avgI  = (rows.reduce((s,r)=>s+r.current,0)/rows.length).toFixed(4);
-  const avgPF = (rows.reduce((s,r)=>s+r.pf,0)/rows.length).toFixed(4);
-  const avgV  = (rows.reduce((s,r)=>s+r.voltage,0)/rows.length).toFixed(2);
-  const avgF  = (rows.reduce((s,r)=>s+(r.frequency||50),0)/rows.length).toFixed(2);
-  const minP  = Math.min(...rows.map(r=>r.power)).toFixed(1);
-  const maxP  = Math.max(...rows.map(r=>r.power)).toFixed(1);
-  const step  = Math.floor(rows.length/5);
-  const samples = [0,1,2,3,4].map(i => rows[Math.min(i*step, rows.length-1)]);
+  const PER_CLASS = 12; // 5 appliances x 12 = 60 total, fits the response token budget comfortably
+  const rng = mkRng(20260711); // fixed seed — reproducible academic sample, not cherry-picked
+  const byLabel = {};
+  VEAM_TEST.forEach((r, i) => { (byLabel[r.label] = byLabel[r.label] || []).push(i); });
+  let sampleIdx = [];
+  Object.values(byLabel).forEach(idxs => {
+    const shuffled = [...idxs];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(rng() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    sampleIdx.push(...shuffled.slice(0, PER_CLASS));
+  });
+  for (let i = sampleIdx.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [sampleIdx[i], sampleIdx[j]] = [sampleIdx[j], sampleIdx[i]];
+  }
+  const sample = sampleIdx.map(i => VEAM_TEST[i]);
 
-  const prompt = `You are a NILM (Non-Intrusive Load Monitoring) expert. Analyze this real electrical data from the DSUAL dataset (University of Almeria, Spain).
+  const prompt = `You are a NILM (Non-Intrusive Load Monitoring) expert classifying individual electrical readings from the DSUAL dataset (University of Almeria, Spain).
 
-TEST SET: ${rows.length} real readings from a smart energy meter.
+TASK: classify EACH of the ${sample.length} readings below into exactly one of these 5 appliances, using its own power/current/PF/voltage signature — the same per-reading classification task a trained classifier performs.
 
-STATISTICS:
-- Avg Active Power: ${avgP} W | Range: ${minP}W to ${maxP}W
-- Avg Current: ${avgI} A
-- Avg Power Factor: ${avgPF}
-- Avg Voltage: ${avgV} V
-- Avg Frequency: ${avgF} Hz
+REAL APPLIANCE POWER REFERENCE:
+- Incandescent Lamp: ~48W, PF~1.0
+- LED Lamp: ~12W, PF~0.57
+- Fan: ~25W, PF~0.997
+- Laptop: ~11W, PF~0.75
+- Fryer: ~16W, PF~0.73
 
-5 REPRESENTATIVE SAMPLES:
-${samples.map((r,i)=>`  [${i+1}] Power=${r.power}W  Current=${r.current}A  PF=${r.pf}  Voltage=${r.voltage}V`).join('\n')}
+READINGS (index, power W, current A, PF, voltage V):
+${sample.map((r,i)=>`[${i}] Power=${r.power}W Current=${r.current}A PF=${r.pf} Voltage=${r.voltage}V`).join('\n')}
 
-APPLIANCES IN THIS DATASET:
-- Incandescent Lamp (typical: ~48W, PF~1.0)
-- LED Lamp (typical: ~12W, PF~0.57)
-- Fan (typical: ~25W, PF~0.997)
-- Laptop (typical: ~11W, PF~0.75)
-- Fryer (typical: ~16W, PF~0.73)
-
-Based on the power signatures, estimate the percentage of readings per appliance. Must sum to 100%.
-Respond ONLY with a valid JSON array:
-[{"name":"Appliance Name","percentage":35,"confidence":"High"}]`;
+Reply ONLY with a JSON array, no extra text, no markdown. Include EXACTLY one object per reading index (${sample.length} total, indices 0 to ${sample.length-1}), never omit one:
+[{"index":0,"name":"Fan","confidence":"High"}, ...]`;
 
   try {
     const res = await fetch('/api/gemini', {
@@ -1577,12 +1586,47 @@ Respond ONLY with a valid JSON array:
     const raw = data.text || '';
     setLog('Groq AI responded — parsing result...', 'ok', 'groqLog');
 
-    let groqData = null;
-    try { const m = raw.match(/\[[\s\S]*\]/); if (m) groqData = JSON.parse(m[0]); } catch(e) {}
+    let parsed = null;
+    try { const m = raw.match(/\[[\s\S]*\]/); if (m) parsed = JSON.parse(m[0]); } catch(e) {}
 
-    if (groqData && Array.isArray(groqData) && groqData.length > 0) {
-      renderGroqResults(groqData);
-      renderSideBySide(groqData);
+    if (parsed && Array.isArray(parsed) && parsed.length > 0) {
+      // Deterministic rule-based confidence check (no LLM involved): compare each
+      // reading's actual (power, PF) against the reference profile for the predicted
+      // appliance vs. the next-closest alternative. Same "hybrid rule + AI" pattern
+      // used in VEAM's live NILM — an objective distance check that can upgrade or
+      // downgrade Groq's self-reported confidence rather than trusting it blindly.
+      const REF = {
+        'Incandescent Lamp': { power: 48, pf: 1.0 },
+        'LED Lamp':          { power: 12, pf: 0.57 },
+        'Fan':               { power: 25, pf: 0.997 },
+        'Laptop':            { power: 11, pf: 0.75 },
+        'Fryer':             { power: 16, pf: 0.73 },
+      };
+      const dist = (r, ref) => Math.hypot((r.power - ref.power) / 50, r.pf - ref.pf);
+      const adjustConfidence = (reading, predictedName, llmConfidence) => {
+        const ranked = Object.keys(REF).map(n => ({ n, d: dist(reading, REF[n]) })).sort((a, b) => a.d - b.d);
+        if (ranked[0].n !== predictedName) return 'Low'; // Groq's pick isn't even the closest profile
+        const margin = ranked[1].d - ranked[0].d;
+        if (margin > 0.3) return 'High';
+        if (margin > 0.1) return llmConfidence;
+        return 'Low'; // ambiguous between two appliance profiles
+      };
+
+      const results = sample.map((r, i) => {
+        const p = parsed.find(x => x.index === i);
+        const predictedName = p?.name || 'Unknown';
+        const confidence = p ? adjustConfidence(r, predictedName, p.confidence) : 'Low';
+        return { reading: r, predictedName, confidence, trueName: r.label, rfPredictedName: rfTestPredictions[sampleIdx[i]] };
+      });
+
+      groqAccuracy = results.filter(x => x.predictedName === x.trueName).length / results.length;
+      const rfSampleAccuracy = results.filter(x => x.rfPredictedName === x.trueName).length / results.length;
+
+      const accCell = document.getElementById('groqAccCell');
+      if (accCell) accCell.innerHTML = `~${(groqAccuracy*100).toFixed(1)}% measurable (n=${results.length})<span class="win-tag win-v">Measured</span>`;
+
+      renderGroqResults(results, groqAccuracy, rfSampleAccuracy);
+      renderSideBySide(results, null, groqAccuracy, rfSampleAccuracy);
     } else {
       document.getElementById('groqResults').innerHTML = `
         <div class="groq-box">
@@ -1599,20 +1643,39 @@ Respond ONLY with a valid JSON array:
   }
 }
 
-function renderGroqResults(data) {
+function renderGroqResults(results, accuracy, rfSampleAccuracy) {
   const confColor = { High:'var(--green)', Medium:'var(--amber)', Low:'var(--red)' };
+  const byName = {};
+  results.forEach(r => {
+    const bucket = byName[r.predictedName] = byName[r.predictedName] || { count: 0, confidences: [] };
+    bucket.count++;
+    bucket.confidences.push(r.confidence);
+  });
+  const total = results.length;
+  const sorted = Object.entries(byName).sort((a,b) => b[1].count - a[1].count);
+  const majorityConf = confs => {
+    const tally = {}; confs.forEach(c => tally[c] = (tally[c]||0) + 1);
+    return Object.entries(tally).sort((a,b) => b[1]-a[1])[0][0];
+  };
+
   document.getElementById('groqResults').innerHTML = `
   <div class="groq-box">
-    <div class="groq-box-title">Groq AI — Test Set Classification (${VEAM_TEST.length} readings)</div>
-    ${data.map(a => {
-      const info = APPLIANCES[a.name] || { icon:'🔌', color:'#52525b' };
-      const cc = confColor[a.confidence] || 'var(--text3)';
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+      <div class="groq-box-title" style="margin:0;">Groq AI — Stratified Sample Classification (${total} readings)</div>
+      <span style="font-family:var(--display);font-size:16px;font-weight:800;color:var(--violet);">${(accuracy*100).toFixed(1)}% Accuracy</span>
+    </div>
+    <div style="font-size:10px;color:var(--text3);margin-bottom:10px;">Same ${total}-reading sample, RF scores ${(rfSampleAccuracy*100).toFixed(1)}% — directly comparable, identical methodology</div>
+    ${sorted.map(([name, bucket]) => {
+      const info = APPLIANCES[name] || { icon:'🔌', color:'#52525b' };
+      const pct = (bucket.count/total*100).toFixed(1);
+      const conf = majorityConf(bucket.confidences);
+      const cc = confColor[conf] || 'var(--text3)';
       return `<div class="groq-row">
         <span class="groq-emoji">${info.icon}</span>
-        <span class="groq-name">${a.name}</span>
-        <div class="groq-bar-track"><div class="groq-bar-fill" style="width:0%" data-t="${a.percentage}"></div></div>
-        <span class="groq-pct">${a.percentage}%</span>
-        <span class="conf-badge" style="color:${cc};border-color:${cc};background:${cc}18;">${a.confidence||'—'}</span>
+        <span class="groq-name">${name}</span>
+        <div class="groq-bar-track"><div class="groq-bar-fill" style="width:0%" data-t="${pct}"></div></div>
+        <span class="groq-pct">${pct}%</span>
+        <span class="conf-badge" style="color:${cc};border-color:${cc};background:${cc}18;">${conf}</span>
       </div>`;
     }).join('')}
   </div>`;
@@ -1621,35 +1684,40 @@ function renderGroqResults(data) {
   });
 }
 
-function renderSideBySide(groqData, rawText) {
+function renderSideBySide(results, rawText, groqAcc, rfSampleAcc) {
   const card = document.getElementById('sbsCard');
   card.style.display = 'block';
 
-  const dist = {}; rfTestPredictions.forEach(p => dist[p]=(dist[p]||0)+1);
-  const total = rfTestPredictions.length;
-  const sorted = Object.entries(dist).sort((a,b) => b[1]-a[1]);
+  if (results) {
+    const total = results.length;
+    const rfDist = {}, groqDist = {};
+    results.forEach(r => {
+      rfDist[r.rfPredictedName] = (rfDist[r.rfPredictedName]||0) + 1;
+      groqDist[r.predictedName] = (groqDist[r.predictedName]||0) + 1;
+    });
+    const rfSorted = Object.entries(rfDist).sort((a,b) => b[1]-a[1]);
+    const groqSorted = Object.entries(groqDist).sort((a,b) => b[1]-a[1]);
 
-  document.getElementById('rfSbs').innerHTML = sorted.map(([label, count]) => {
-    const info = APPLIANCES[label] || { icon:'🔌' };
-    return `<div class="sbs-row">
-      <span style="display:flex;align-items:center;gap:6px;">${info.icon} <span style="font-size:12px;">${label}</span></span>
-      <span style="font-family:var(--mono);font-size:11px;color:var(--green);font-weight:700;">${(count/total*100).toFixed(1)}%</span>
-    </div>`;
-  }).join('');
-
-  if (groqData) {
-    document.getElementById('groqSbs').innerHTML = groqData.map(a => {
-      const info = APPLIANCES[a.name] || { icon:'🔌' };
+    document.getElementById('rfSbs').innerHTML = rfSorted.map(([label, count]) => {
+      const info = APPLIANCES[label] || { icon:'🔌' };
       return `<div class="sbs-row">
-        <span style="display:flex;align-items:center;gap:6px;">${info.icon} <span style="font-size:12px;">${a.name}</span></span>
-        <span style="font-family:var(--mono);font-size:11px;color:var(--violet);font-weight:700;">${a.percentage}%</span>
+        <span style="display:flex;align-items:center;gap:6px;">${info.icon} <span style="font-size:12px;">${label}</span></span>
+        <span style="font-family:var(--mono);font-size:11px;color:var(--green);font-weight:700;">${(count/total*100).toFixed(1)}%</span>
       </div>`;
     }).join('');
 
-    const rfNames = new Set(sorted.filter(([,c])=>c/total>0.05).map(([l])=>l));
-    const grNames = new Set(groqData.filter(a=>a.percentage>5).map(a=>a.name));
-    const inter = [...rfNames].filter(n => grNames.has(n));
-    const agree = Math.round(inter.length/Math.max(rfNames.size, grNames.size)*100);
+    document.getElementById('groqSbs').innerHTML = groqSorted.map(([label, count]) => {
+      const info = APPLIANCES[label] || { icon:'🔌' };
+      return `<div class="sbs-row">
+        <span style="display:flex;align-items:center;gap:6px;">${info.icon} <span style="font-size:12px;">${label}</span></span>
+        <span style="font-family:var(--mono);font-size:11px;color:var(--violet);font-weight:700;">${(count/total*100).toFixed(1)}%</span>
+      </div>`;
+    }).join('');
+
+    // Genuine instance-level agreement: RF and Groq predictions compared reading-by-reading
+    // on the identical sample, not a coarse "both mention this category" heuristic.
+    const agreeCount = results.filter(r => r.rfPredictedName === r.predictedName).length;
+    const agree = Math.round(agreeCount / total * 100);
     const isHigh = agree >= 60;
     const col = isHigh ? 'var(--green)' : 'var(--amber)';
 
@@ -1657,14 +1725,15 @@ function renderSideBySide(groqData, rawText) {
     <div class="agreement" style="background:${col}08;border-color:${col}40;">
       <div class="agreement-label">Agreement Score</div>
       <div class="agreement-score" style="color:${col};">${agree}% Match</div>
-      <div class="agreement-desc">${inter.length>0 ? 'Both agree on: '+inter.join(', ') : 'Different classification patterns'}</div>
-      <div class="agreement-footnote">RF: ${(rfAccuracy*100).toFixed(2)}% measurable accuracy · Groq AI: qualitative reasoning</div>
+      <div class="agreement-desc">RF and Groq agreed on ${agreeCount}/${total} individual readings in this sample</div>
+      <div class="agreement-footnote">RF: ${(rfSampleAcc*100).toFixed(1)}% on this sample (${(rfAccuracy*100).toFixed(2)}% on the full 4,771-reading test set) · Groq AI: ${(groqAcc*100).toFixed(1)}% measured accuracy, same sample</div>
     </div>`;
     card.scrollIntoView({ behavior:'smooth', block:'start' });
   } else {
     document.getElementById('groqSbs').innerHTML = `<div style="font-size:11px;color:var(--text2);line-height:1.7;">${(rawText||'').substring(0,300)}</div>`;
   }
 }
+
 </script>
 </body>
 </html>
