@@ -1537,7 +1537,7 @@ async function runGroqAI() {
   btn.disabled = true;
   document.getElementById('groqResults').innerHTML = '';
 
-  const BATCH_SIZE = 200; // ~3,000 of the 4,096 response-token budget per call — safe margin for the model's internal reasoning tokens (reasoning_effort: "low")
+  const BATCH_SIZE = 100; // smaller batches finish faster per request — lower risk of hitting the ~25s API timeout, at the cost of more sequential calls
   const total = VEAM_TEST.length;
   const numBatches = Math.ceil(total / BATCH_SIZE);
 
@@ -1566,14 +1566,8 @@ async function runGroqAI() {
   const results = new Array(total).fill(null);
   let failedBatches = 0;
 
-  for (let b = 0; b < numBatches; b++) {
-    const start = b * BATCH_SIZE;
-    const end = Math.min(start + BATCH_SIZE, total);
-    const batch = VEAM_TEST.slice(start, end);
-
-    btn.innerHTML = `<span class="spin"></span> Classifying ${end}/${total}...`;
-    setLog(`Batch ${b+1}/${numBatches} — classifying readings ${start+1}–${end} of ${total} (full test set)...`, 'inf', 'groqLog');
-
+  // Small helper: attempts one batch classification once. Returns parsed array or null.
+  const classifyBatch = async (batch) => {
     const prompt = `You are a NILM (Non-Intrusive Load Monitoring) expert classifying individual electrical readings from the DSUAL dataset (University of Almeria, Spain).
 
 TASK: classify EACH of the ${batch.length} readings below into exactly one of these 5 appliances, using its own power/current/PF/voltage signature — the same per-instance task a trained classifier performs.
@@ -1591,30 +1585,55 @@ ${batch.map((r,i)=>`[${i}] Power=${r.power}W Current=${r.current}A PF=${r.pf} Vo
 Reply ONLY with a JSON array, no extra text, no markdown. Include EXACTLY one object per reading index (${batch.length} total, indices 0 to ${batch.length-1}), never omit one:
 [{"index":0,"name":"Fan","confidence":"High"}, ...]`;
 
-    try {
-      const res = await fetch('/api/gemini', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt })
-      });
-      if (!res.ok) throw new Error(`API error ${res.status}`);
-      const data = await res.json();
-      const raw = data.text || '';
-      let parsed = null;
-      try { const m = raw.match(/\[[\s\S]*\]/); if (m) parsed = JSON.parse(m[0]); } catch(e) {}
+    const res = await fetch('/api/gemini', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}: ${data.text || 'no error detail returned'}`);
+    }
+    const raw = data.text || '';
+    const m = raw.match(/\[[\s\S]*\]/);
+    if (!m) throw new Error('Response was not valid JSON: ' + raw.slice(0, 120));
+    return JSON.parse(m[0]);
+  };
 
-      if (parsed && Array.isArray(parsed)) {
-        batch.forEach((r, i) => {
-          const p = parsed.find(x => x.index === i);
-          const predictedName = p?.name || 'Unknown';
-          const confidence = p ? adjustConfidence(r, predictedName, p.confidence) : 'Low';
-          results[start + i] = { reading: r, predictedName, confidence, trueName: r.label, rfPredictedName: rfTestPredictions[start + i] };
-        });
-      } else {
-        failedBatches++;
+  for (let b = 0; b < numBatches; b++) {
+    const start = b * BATCH_SIZE;
+    const end = Math.min(start + BATCH_SIZE, total);
+    const batch = VEAM_TEST.slice(start, end);
+
+    btn.innerHTML = `<span class="spin"></span> Classifying ${end}/${total}...`;
+    setLog(`Batch ${b+1}/${numBatches} — classifying readings ${start+1}–${end} of ${total} (full test set)...`, 'inf', 'groqLog');
+
+    let parsed = null;
+    let lastError = null;
+    // Retry once on failure (transient network hiccup or a slow response) before giving up on this batch.
+    for (let attempt = 1; attempt <= 2 && !parsed; attempt++) {
+      try {
+        parsed = await classifyBatch(batch);
+      } catch (e) {
+        lastError = e;
+        if (attempt === 1) {
+          setLog(`Batch ${b+1}/${numBatches} failed (${e.message}) — retrying...`, 'warn', 'groqLog');
+          await sleep(800);
+        }
       }
-    } catch (e) {
+    }
+
+    if (parsed && Array.isArray(parsed)) {
+      batch.forEach((r, i) => {
+        const p = parsed.find(x => x.index === i);
+        const predictedName = p?.name || 'Unknown';
+        const confidence = p ? adjustConfidence(r, predictedName, p.confidence) : 'Low';
+        results[start + i] = { reading: r, predictedName, confidence, trueName: r.label, rfPredictedName: rfTestPredictions[start + i] };
+      });
+    } else {
       failedBatches++;
+      console.error(`Groq batch ${b+1}/${numBatches} failed after retry:`, lastError);
+      setLog(`Batch ${b+1}/${numBatches} failed after retry (${lastError?.message || 'unknown error'}) — skipping.`, 'warn', 'groqLog');
     }
     await sleep(150); // brief pause between calls
   }
