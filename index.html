@@ -1155,7 +1155,7 @@ footer {
     <div class="card-icon" style="background:var(--amber-dim);">⚖️</div>
     <div class="card-meta">
       <div class="card-title">Side-by-Side Comparison</div>
-      <div class="card-sub">4,771 test readings · RF predictions vs Groq AI estimates</div>
+      <div class="card-sub" id="sbsSubtitle">RF vs Groq AI — both evaluated on the same 4,771-reading test set (20% split)</div>
     </div>
   </div>
   <div class="card-body">
@@ -1523,44 +1523,60 @@ function renderRFResults(dist, total, classCorrect, classTotal) {
 // ═══════════════════════════════════
 // RUN GROQ AI
 // ═══════════════════════════════════
-// Methodology fix: instead of handing Groq ONE population-level average over all
-// 4,771 mixed readings and asking it to guess a % share per appliance (a task with
-// no real signal to reason from — hence the suspiciously round outputs), Groq is
-// now given a STRATIFIED SAMPLE of individual readings (equal count per appliance,
-// fixed seed for reproducibility) and asked to classify EACH ONE independently by
-// its own power/current/PF/voltage — the exact same per-instance task Random Forest
-// performs. This makes Groq's accuracy genuinely measurable against ground truth,
-// on an identical sample RF is also evaluated on, for a fair side-by-side.
+// Methodology: RF is trained on the 19,084-reading train split and evaluated on the
+// 4,771-reading test split (the same 80/20 split). Groq AI is evaluated on that EXACT
+// same 4,771-reading test set — not a subsample — so both methods are compared on
+// identical ground truth. Since one API call can't classify 4,771 readings (would
+// need ~85,000+ output tokens vs. a 4,096 budget), the test set is processed in
+// sequential batches, each classifying every reading in that batch individually by
+// its own power/current/PF/voltage — the same per-instance task RF performs — and
+// results are accumulated across all batches into one full-coverage accuracy score.
 async function runGroqAI() {
   if (!rfTrees.length) { setLog('Run Random Forest first', 'warn', 'groqLog'); return; }
   const btn = document.getElementById('groqBtn');
   btn.disabled = true;
-  btn.innerHTML = '<span class="spin"></span> Asking Groq AI...';
-  setLog('Building a balanced sample and sending individual readings to Groq AI (LLaMA 3.3 70B)...', 'inf', 'groqLog');
   document.getElementById('groqResults').innerHTML = '';
 
-  const PER_CLASS = 12; // 5 appliances x 12 = 60 total, fits the response token budget comfortably
-  const rng = mkRng(20260711); // fixed seed — reproducible academic sample, not cherry-picked
-  const byLabel = {};
-  VEAM_TEST.forEach((r, i) => { (byLabel[r.label] = byLabel[r.label] || []).push(i); });
-  let sampleIdx = [];
-  Object.values(byLabel).forEach(idxs => {
-    const shuffled = [...idxs];
-    for (let i = shuffled.length - 1; i > 0; i--) {
-      const j = Math.floor(rng() * (i + 1));
-      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-    }
-    sampleIdx.push(...shuffled.slice(0, PER_CLASS));
-  });
-  for (let i = sampleIdx.length - 1; i > 0; i--) {
-    const j = Math.floor(rng() * (i + 1));
-    [sampleIdx[i], sampleIdx[j]] = [sampleIdx[j], sampleIdx[i]];
-  }
-  const sample = sampleIdx.map(i => VEAM_TEST[i]);
+  const BATCH_SIZE = 200; // ~3,000 of the 4,096 response-token budget per call — safe margin for the model's internal reasoning tokens (reasoning_effort: "low")
+  const total = VEAM_TEST.length;
+  const numBatches = Math.ceil(total / BATCH_SIZE);
 
-  const prompt = `You are a NILM (Non-Intrusive Load Monitoring) expert classifying individual electrical readings from the DSUAL dataset (University of Almeria, Spain).
+  const REF = {
+    'Incandescent Lamp': { power: 48, pf: 1.0 },
+    'LED Lamp':          { power: 12, pf: 0.57 },
+    'Fan':               { power: 25, pf: 0.997 },
+    'Laptop':            { power: 11, pf: 0.75 },
+    'Fryer':             { power: 16, pf: 0.73 },
+  };
+  // Deterministic rule-based confidence check (no LLM involved): compare each
+  // reading's actual (power, PF) against the reference profile for the predicted
+  // appliance vs. the next-closest alternative. Same "hybrid rule + AI" pattern used
+  // in VEAM's live NILM — an objective distance check that can upgrade or downgrade
+  // Groq's self-reported confidence rather than trusting it blindly.
+  const dist = (r, ref) => Math.hypot((r.power - ref.power) / 50, r.pf - ref.pf);
+  const adjustConfidence = (reading, predictedName, llmConfidence) => {
+    const ranked = Object.keys(REF).map(n => ({ n, d: dist(reading, REF[n]) })).sort((a, b) => a.d - b.d);
+    if (ranked[0].n !== predictedName) return 'Low'; // Groq's pick isn't even the closest profile
+    const margin = ranked[1].d - ranked[0].d;
+    if (margin > 0.3) return 'High';
+    if (margin > 0.1) return llmConfidence;
+    return 'Low'; // ambiguous between two appliance profiles
+  };
 
-TASK: classify EACH of the ${sample.length} readings below into exactly one of these 5 appliances, using its own power/current/PF/voltage signature — the same per-reading classification task a trained classifier performs.
+  const results = new Array(total).fill(null);
+  let failedBatches = 0;
+
+  for (let b = 0; b < numBatches; b++) {
+    const start = b * BATCH_SIZE;
+    const end = Math.min(start + BATCH_SIZE, total);
+    const batch = VEAM_TEST.slice(start, end);
+
+    btn.innerHTML = `<span class="spin"></span> Classifying ${end}/${total}...`;
+    setLog(`Batch ${b+1}/${numBatches} — classifying readings ${start+1}–${end} of ${total} (full test set)...`, 'inf', 'groqLog');
+
+    const prompt = `You are a NILM (Non-Intrusive Load Monitoring) expert classifying individual electrical readings from the DSUAL dataset (University of Almeria, Spain).
+
+TASK: classify EACH of the ${batch.length} readings below into exactly one of these 5 appliances, using its own power/current/PF/voltage signature — the same per-instance task a trained classifier performs.
 
 REAL APPLIANCE POWER REFERENCE:
 - Incandescent Lamp: ~48W, PF~1.0
@@ -1570,77 +1586,61 @@ REAL APPLIANCE POWER REFERENCE:
 - Fryer: ~16W, PF~0.73
 
 READINGS (index, power W, current A, PF, voltage V):
-${sample.map((r,i)=>`[${i}] Power=${r.power}W Current=${r.current}A PF=${r.pf} Voltage=${r.voltage}V`).join('\n')}
+${batch.map((r,i)=>`[${i}] Power=${r.power}W Current=${r.current}A PF=${r.pf} Voltage=${r.voltage}V`).join('\n')}
 
-Reply ONLY with a JSON array, no extra text, no markdown. Include EXACTLY one object per reading index (${sample.length} total, indices 0 to ${sample.length-1}), never omit one:
+Reply ONLY with a JSON array, no extra text, no markdown. Include EXACTLY one object per reading index (${batch.length} total, indices 0 to ${batch.length-1}), never omit one:
 [{"index":0,"name":"Fan","confidence":"High"}, ...]`;
 
-  try {
-    const res = await fetch('/api/gemini', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt })
-    });
-    if (!res.ok) throw new Error(`API error ${res.status}`);
-    const data = await res.json();
-    const raw = data.text || '';
-    setLog('Groq AI responded — parsing result...', 'ok', 'groqLog');
-
-    let parsed = null;
-    try { const m = raw.match(/\[[\s\S]*\]/); if (m) parsed = JSON.parse(m[0]); } catch(e) {}
-
-    if (parsed && Array.isArray(parsed) && parsed.length > 0) {
-      // Deterministic rule-based confidence check (no LLM involved): compare each
-      // reading's actual (power, PF) against the reference profile for the predicted
-      // appliance vs. the next-closest alternative. Same "hybrid rule + AI" pattern
-      // used in VEAM's live NILM — an objective distance check that can upgrade or
-      // downgrade Groq's self-reported confidence rather than trusting it blindly.
-      const REF = {
-        'Incandescent Lamp': { power: 48, pf: 1.0 },
-        'LED Lamp':          { power: 12, pf: 0.57 },
-        'Fan':               { power: 25, pf: 0.997 },
-        'Laptop':            { power: 11, pf: 0.75 },
-        'Fryer':             { power: 16, pf: 0.73 },
-      };
-      const dist = (r, ref) => Math.hypot((r.power - ref.power) / 50, r.pf - ref.pf);
-      const adjustConfidence = (reading, predictedName, llmConfidence) => {
-        const ranked = Object.keys(REF).map(n => ({ n, d: dist(reading, REF[n]) })).sort((a, b) => a.d - b.d);
-        if (ranked[0].n !== predictedName) return 'Low'; // Groq's pick isn't even the closest profile
-        const margin = ranked[1].d - ranked[0].d;
-        if (margin > 0.3) return 'High';
-        if (margin > 0.1) return llmConfidence;
-        return 'Low'; // ambiguous between two appliance profiles
-      };
-
-      const results = sample.map((r, i) => {
-        const p = parsed.find(x => x.index === i);
-        const predictedName = p?.name || 'Unknown';
-        const confidence = p ? adjustConfidence(r, predictedName, p.confidence) : 'Low';
-        return { reading: r, predictedName, confidence, trueName: r.label, rfPredictedName: rfTestPredictions[sampleIdx[i]] };
+    try {
+      const res = await fetch('/api/gemini', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt })
       });
+      if (!res.ok) throw new Error(`API error ${res.status}`);
+      const data = await res.json();
+      const raw = data.text || '';
+      let parsed = null;
+      try { const m = raw.match(/\[[\s\S]*\]/); if (m) parsed = JSON.parse(m[0]); } catch(e) {}
 
-      groqAccuracy = results.filter(x => x.predictedName === x.trueName).length / results.length;
-      const rfSampleAccuracy = results.filter(x => x.rfPredictedName === x.trueName).length / results.length;
-
-      const accCell = document.getElementById('groqAccCell');
-      if (accCell) accCell.innerHTML = `~${(groqAccuracy*100).toFixed(1)}% measurable (n=${results.length})<span class="win-tag win-v">Measured</span>`;
-
-      renderGroqResults(results, groqAccuracy, rfSampleAccuracy);
-      renderSideBySide(results, null, groqAccuracy, rfSampleAccuracy);
-    } else {
-      document.getElementById('groqResults').innerHTML = `
-        <div class="groq-box">
-          <div class="groq-box-title">Groq AI Response (Raw)</div>
-          <div class="groq-raw">${raw}</div>
-        </div>`;
-      renderSideBySide(null, raw);
+      if (parsed && Array.isArray(parsed)) {
+        batch.forEach((r, i) => {
+          const p = parsed.find(x => x.index === i);
+          const predictedName = p?.name || 'Unknown';
+          const confidence = p ? adjustConfidence(r, predictedName, p.confidence) : 'Low';
+          results[start + i] = { reading: r, predictedName, confidence, trueName: r.label, rfPredictedName: rfTestPredictions[start + i] };
+        });
+      } else {
+        failedBatches++;
+      }
+    } catch (e) {
+      failedBatches++;
     }
-  } catch(e) {
-    setLog('Error: ' + e.message, 'warn', 'groqLog');
-  } finally {
+    await sleep(150); // brief pause between calls
+  }
+
+  const valid = results.filter(Boolean);
+  if (valid.length === 0) {
+    setLog('Groq AI: all batches failed — check API/network and try again.', 'warn', 'groqLog');
     btn.disabled = false;
     btn.innerHTML = '🤖 Re-run Groq AI';
+    return;
   }
+
+  groqAccuracy = valid.filter(x => x.predictedName === x.trueName).length / valid.length;
+  const rfAccuracyOnSameSet = valid.filter(x => x.rfPredictedName === x.trueName).length / valid.length;
+
+  const accCell = document.getElementById('groqAccCell');
+  if (accCell) accCell.innerHTML = `~${(groqAccuracy*100).toFixed(1)}% measurable (${valid.length}/${total} readings)<span class="win-tag win-v">Measured</span>`;
+
+  const note = failedBatches > 0 ? ` — ${failedBatches} batch(es) failed, ${total - valid.length} readings excluded` : '';
+  setLog(`Done — classified ${valid.length}/${total} readings${note}. Accuracy: ${(groqAccuracy*100).toFixed(1)}%`, failedBatches > 0 ? 'warn' : 'ok', 'groqLog');
+
+  renderGroqResults(valid, groqAccuracy, rfAccuracyOnSameSet);
+  renderSideBySide(valid, null, groqAccuracy, rfAccuracyOnSameSet);
+
+  btn.disabled = false;
+  btn.innerHTML = '🤖 Re-run Groq AI';
 }
 
 function renderGroqResults(results, accuracy, rfSampleAccuracy) {
@@ -1661,10 +1661,10 @@ function renderGroqResults(results, accuracy, rfSampleAccuracy) {
   document.getElementById('groqResults').innerHTML = `
   <div class="groq-box">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
-      <div class="groq-box-title" style="margin:0;">Groq AI — Stratified Sample Classification (${total} readings)</div>
+      <div class="groq-box-title" style="margin:0;">Groq AI — Full Test Set Classification (${total} readings)</div>
       <span style="font-family:var(--display);font-size:16px;font-weight:800;color:var(--violet);">${(accuracy*100).toFixed(1)}% Accuracy</span>
     </div>
-    <div style="font-size:10px;color:var(--text3);margin-bottom:10px;">Same ${total}-reading sample, RF scores ${(rfSampleAccuracy*100).toFixed(1)}% — directly comparable, identical methodology</div>
+    <div style="font-size:10px;color:var(--text3);margin-bottom:10px;">Full test set (${total} readings), RF scores ${(rfSampleAccuracy*100).toFixed(1)}% on the same readings — directly comparable, identical methodology</div>
     ${sorted.map(([name, bucket]) => {
       const info = APPLIANCES[name] || { icon:'🔌', color:'#52525b' };
       const pct = (bucket.count/total*100).toFixed(1);
@@ -1690,6 +1690,8 @@ function renderSideBySide(results, rawText, groqAcc, rfSampleAcc) {
 
   if (results) {
     const total = results.length;
+    const sub = document.getElementById('sbsSubtitle');
+    if (sub) sub.textContent = `Both evaluated on the same ${total}-reading test set (20% split) · RF predictions vs Groq AI classifications, same readings`;
     const rfDist = {}, groqDist = {};
     results.forEach(r => {
       rfDist[r.rfPredictedName] = (rfDist[r.rfPredictedName]||0) + 1;
@@ -1726,7 +1728,7 @@ function renderSideBySide(results, rawText, groqAcc, rfSampleAcc) {
       <div class="agreement-label">Agreement Score</div>
       <div class="agreement-score" style="color:${col};">${agree}% Match</div>
       <div class="agreement-desc">RF and Groq agreed on ${agreeCount}/${total} individual readings in this sample</div>
-      <div class="agreement-footnote">RF: ${(rfSampleAcc*100).toFixed(1)}% on this sample (${(rfAccuracy*100).toFixed(2)}% on the full 4,771-reading test set) · Groq AI: ${(groqAcc*100).toFixed(1)}% measured accuracy, same sample</div>
+      <div class="agreement-footnote">RF: ${(rfSampleAcc*100).toFixed(1)}% on these readings (${(rfAccuracy*100).toFixed(2)}% official test-set accuracy) · Groq AI: ${(groqAcc*100).toFixed(1)}% measured accuracy, same readings</div>
     </div>`;
     card.scrollIntoView({ behavior:'smooth', block:'start' });
   } else {
