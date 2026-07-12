@@ -60,7 +60,7 @@ export default async function handler(req: Request) {
       return new Response(
         JSON.stringify({ text: "AI service returned an error. Please try again." }),
         {
-          status: 502,
+          status: res.status, // forward the real upstream status (429 = rate limited, etc.) so the client can react appropriately
           headers: {
             "Content-Type": "application/json",
             "Access-Control-Allow-Origin": "*",
