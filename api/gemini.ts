@@ -57,8 +57,13 @@ export default async function handler(req: Request) {
     if (!res.ok) {
       const errText = await res.text();
       console.error("Groq API error:", res.status, errText);
+      const retryAfterHeader = res.headers.get("retry-after");
       return new Response(
-        JSON.stringify({ text: "AI service returned an error. Please try again." }),
+        JSON.stringify({
+          text: "AI service returned an error. Please try again.",
+          retryAfterSec: retryAfterHeader ? parseFloat(retryAfterHeader) : null,
+          upstreamDetail: errText.slice(0, 300),
+        }),
         {
           status: res.status, // forward the real upstream status (429 = rate limited, etc.) so the client can react appropriately
           headers: {
