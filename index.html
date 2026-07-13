@@ -1094,6 +1094,7 @@ footer {
   <div class="card-body">
     <div class="btn-row">
       <button class="btn btn-primary" id="rfBtn" onclick="runRandomForest()">🌲 Run Random Forest</button>
+      <button class="btn btn-secondary" id="clearCacheBtn" onclick="clearModelCache()" style="display:none;font-size:11px;">🗑 Clear Saved Model</button>
     </div>
 
     <div class="progress-wrap" id="progressWrap">
@@ -1142,9 +1143,9 @@ footer {
       The model identifies appliances from power signatures without any prior training on this dataset.
     </p>
     <div class="btn-row">
-      <button class="btn btn-secondary" id="groqBtn" onclick="runGroqAI()" disabled>🤖 Run Groq AI Analysis</button>
+      <button class="btn btn-secondary" id="groqBtn" onclick="runGroqAI()">🤖 Run Groq AI Analysis</button>
     </div>
-    <div class="log" id="groqLog"><span class="inf">> Run Random Forest first, then Groq AI...</span></div>
+    <div class="log" id="groqLog"><span class="inf">> Ready — works standalone, or run Random Forest first for a side-by-side comparison</span></div>
     <div id="groqResults"></div>
   </div>
 </div>
@@ -1371,6 +1372,83 @@ let rfTrees=[], rfAccuracy=0, rfTestPredictions=[];
 let groqAccuracy=0;
 let trainStart=0;
 
+// ═══════════════════════════════════
+// MODEL PERSISTENCE (localStorage)
+// ═══════════════════════════════════
+// Trees are plain data (feat/thr/left/right/label), so JSON.stringify/parse
+// round-trips them fine. We just need to re-attach the DTree prototype
+// (for the .predict() method) after parsing back from storage.
+const RF_CACHE_KEY = 'veam_rf_model_v1';
+
+function reviveTree(node) {
+  if (!node) return null;
+  const t = new DTree();
+  t.feat = node.feat; t.thr = node.thr; t.label = node.label;
+  t.left = reviveTree(node.left);
+  t.right = reviveTree(node.right);
+  return t;
+}
+
+function saveModelToCache() {
+  try {
+    localStorage.setItem(RF_CACHE_KEY, JSON.stringify({
+      trainCount: VEAM_TRAIN.length,
+      testCount: VEAM_TEST.length,
+      trees: rfTrees,
+      rfTestPredictions,
+      rfAccuracy
+    }));
+  } catch (e) {
+    console.warn('Could not save model to localStorage (storage full or disabled):', e);
+  }
+}
+
+function loadCachedModel() {
+  try {
+    const raw = localStorage.getItem(RF_CACHE_KEY);
+    if (!raw) return false;
+    const cached = JSON.parse(raw);
+    // Invalidate cache if the underlying dataset changed size (data.js updated)
+    if (cached.trainCount !== VEAM_TRAIN.length || cached.testCount !== VEAM_TEST.length) return false;
+    rfTrees = cached.trees.map(reviveTree);
+    rfTestPredictions = cached.rfTestPredictions;
+    rfAccuracy = cached.rfAccuracy;
+    return true;
+  } catch (e) {
+    console.warn('Could not load cached model:', e);
+    return false;
+  }
+}
+
+function clearModelCache() {
+  localStorage.removeItem(RF_CACHE_KEY);
+  rfTrees = []; rfTestPredictions = []; rfAccuracy = 0;
+  document.getElementById('clearCacheBtn').style.display = 'none';
+  document.getElementById('rfBtn').innerHTML = '🌲 Run Random Forest';
+  document.getElementById('rfResults').innerHTML = `
+    <div class="empty">
+      <div class="empty-icon">🌲</div>
+      <div class="empty-text">Click "Run Random Forest" to start training</div>
+    </div>`;
+  setLog('Saved model cleared — click to train again', 'inf', 'rfLog');
+}
+
+function initFromCache() {
+  if (!loadCachedModel()) return;
+  const testY = VEAM_TEST.map(r => r.label);
+  const classCorrect = {}, classTotal = {};
+  testY.forEach((y, i) => {
+    classTotal[y] = (classTotal[y]||0) + 1;
+    if (rfTestPredictions[i] === y) classCorrect[y] = (classCorrect[y]||0) + 1;
+  });
+  const dist = {};
+  rfTestPredictions.forEach(p => dist[p] = (dist[p]||0) + 1);
+  renderRFResults(dist, VEAM_TEST.length, classCorrect, classTotal);
+  setLog(`Loaded saved model — Accuracy: ${(rfAccuracy*100).toFixed(2)}% (no retraining needed)`, 'ok', 'rfLog');
+  document.getElementById('rfBtn').innerHTML = '🌲 Re-run';
+  document.getElementById('clearCacheBtn').style.display = 'inline-flex';
+}
+
 function rowToFeatures(r) { return [r.voltage||230, r.current||0, r.power||0, r.frequency||50, r.pf||0]; }
 
 function setLog(msg, cls='inf', id='rfLog') {
@@ -1459,12 +1537,14 @@ async function runRandomForest() {
   const elapsed = ((Date.now()-trainStart)/1000).toFixed(1);
   setLog(`Done in ${elapsed}s — Accuracy: ${(rfAccuracy*100).toFixed(2)}% on 4,771 test readings`, 'ok', 'rfLog');
 
+  saveModelToCache();
+  document.getElementById('clearCacheBtn').style.display = 'inline-flex';
+
   await sleep(400);
   hideProgress();
   renderRFResults(dist, testX.length, classCorrect, classTotal);
   btn.disabled = false;
   btn.innerHTML = '🌲 Re-run';
-  document.getElementById('groqBtn').disabled = false;
   setLog('Now click "Run Groq AI" to compare', 'inf', 'groqLog');
 }
 
@@ -1540,7 +1620,7 @@ function renderRFResults(dist, total, classCorrect, classTotal) {
 // genuinely measurable against ground truth. One request only: no batching, no
 // rate-limit risk, fast and reliable.
 async function runGroqAI() {
-  if (!rfTrees.length) { setLog('Run Random Forest first', 'warn', 'groqLog'); return; }
+  const hasRF = rfTrees.length > 0;
   const btn = document.getElementById('groqBtn');
   btn.disabled = true;
   btn.innerHTML = '<span class="spin"></span> Asking Groq AI...';
@@ -1624,17 +1704,21 @@ Reply ONLY with a JSON array, no extra text, no markdown. Include EXACTLY one ob
         const p = parsed.find(x => x.index === i);
         const predictedName = p?.name || 'Unknown';
         const confidence = p ? adjustConfidence(r, predictedName, p.confidence) : 'Low';
-        return { reading: r, predictedName, confidence, trueName: r.label, rfPredictedName: rfTestPredictions[sampleIdx[i]] };
+        return { reading: r, predictedName, confidence, trueName: r.label, rfPredictedName: hasRF ? rfTestPredictions[sampleIdx[i]] : null };
       });
 
       groqAccuracy = results.filter(x => x.predictedName === x.trueName).length / results.length;
-      const rfSampleAccuracy = results.filter(x => x.rfPredictedName === x.trueName).length / results.length;
+      const rfSampleAccuracy = hasRF ? results.filter(x => x.rfPredictedName === x.trueName).length / results.length : null;
 
       const accCell = document.getElementById('groqAccCell');
       if (accCell) accCell.innerHTML = `~${(groqAccuracy*100).toFixed(1)}% measurable (n=${results.length})<span class="win-tag win-v">Measured</span>`;
 
       renderGroqResults(results, groqAccuracy, rfSampleAccuracy);
-      renderSideBySide(results, null, groqAccuracy, rfSampleAccuracy);
+      if (hasRF) {
+        renderSideBySide(results, null, groqAccuracy, rfSampleAccuracy);
+      } else {
+        setLog(`Done — ${(groqAccuracy*100).toFixed(1)}% accuracy. Run Random Forest too for a side-by-side comparison.`, 'ok', 'groqLog');
+      }
     } else {
       document.getElementById('groqResults').innerHTML = `
         <div class="groq-box">
@@ -1672,7 +1756,7 @@ function renderGroqResults(results, accuracy, rfSampleAccuracy) {
       <div class="groq-box-title" style="margin:0;">Groq AI — Stratified Sample Classification (${total} readings)</div>
       <span style="font-family:var(--display);font-size:16px;font-weight:800;color:var(--violet);">${(accuracy*100).toFixed(1)}% Accuracy</span>
     </div>
-    <div style="font-size:10px;color:var(--text3);margin-bottom:10px;">Same ${total}-reading sample, RF scores ${(rfSampleAccuracy*100).toFixed(1)}% — directly comparable, identical methodology</div>
+    <div style="font-size:10px;color:var(--text3);margin-bottom:10px;">${rfSampleAccuracy!==null ? `Same ${total}-reading sample, RF scores ${(rfSampleAccuracy*100).toFixed(1)}% — directly comparable, identical methodology` : `Standalone Groq run (no Random Forest trained yet) — train RF for a side-by-side comparison`}</div>
     ${sorted.map(([name, bucket]) => {
       const info = APPLIANCES[name] || { icon:'🔌', color:'#52525b' };
       const pct = (bucket.count/total*100).toFixed(1);
@@ -1743,6 +1827,11 @@ function renderSideBySide(results, rawText, groqAcc, rfSampleAcc) {
     document.getElementById('groqSbs').innerHTML = `<div style="font-size:11px;color:var(--text2);line-height:1.7;">${(rawText||'').substring(0,300)}</div>`;
   }
 }
+
+// ═══════════════════════════════════
+// INIT — restore saved model on page load, if any
+// ═══════════════════════════════════
+initFromCache();
 
 </script>
 </body>
