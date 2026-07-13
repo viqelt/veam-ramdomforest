@@ -58,7 +58,7 @@ export default async function handler(req: Request) {
       const errText = await res.text();
       console.error("Groq API error:", res.status, errText);
       return new Response(
-        JSON.stringify({ text: "AI service returned an error. Please try again." }),
+        JSON.stringify({ text: `Groq returned HTTP ${res.status}: ${errText.slice(0, 500)}` }),
         {
           status: 502,
           headers: {
