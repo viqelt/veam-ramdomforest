@@ -1614,7 +1614,9 @@ function renderRFResults(dist, total, classCorrect, classTotal) {
 // ═══════════════════════════════════
 // RUN GROQ AI
 // ═══════════════════════════════════
-// Single request, stratified sample of 200 readings (40 per appliance, fixed seed).
+// Single request, stratified sample of 120 readings (24 per appliance, fixed seed).
+// Reduced from 200 (40/class) because Groq's on_demand tier caps requests at
+// 8000 tokens/minute, and the larger batch was requesting ~9500 tokens (HTTP 413).
 // Sends each reading's own power/current/PF/voltage individually and asks Groq to
 // classify EACH one — the same per-instance task RF performs — so accuracy is
 // genuinely measurable against ground truth. One request only: no batching, no
@@ -1627,7 +1629,7 @@ async function runGroqAI() {
   setLog('Building a balanced sample and sending individual readings to Groq AI (LLaMA 3.3 70B)...', 'inf', 'groqLog');
   document.getElementById('groqResults').innerHTML = '';
 
-  const PER_CLASS = 40; // 5 appliances x 40 = 200 total — ~3,000 of the 4,096 response-token budget, safe for one request
+  const PER_CLASS = 24; // 5 appliances x 24 = 120 total — keeps request well under Groq's 8000 TPM cap
   const rng = mkRng(20260711); // fixed seed — reproducible academic sample, not cherry-picked
   const byLabel = {};
   VEAM_TEST.forEach((r, i) => { (byLabel[r.label] = byLabel[r.label] || []).push(i); });
