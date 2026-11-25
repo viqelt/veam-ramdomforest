@@ -7,6 +7,7 @@
 **Appliance recognition from electrical signatures: a supervised model against a zero-shot language model.**
 
 [![Live demo](https://img.shields.io/badge/Live%20demo-Vercel-000000?logo=vercel&logoColor=white)](https://veam-rf.vercel.app/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Status](https://img.shields.io/badge/Status-Academic%20research-7c3aed)](#-academic-context)
 [![Model](https://img.shields.io/badge/ML-Random%20Forest-22c55e)](#-method)
 [![LLM](https://img.shields.io/badge/LLM-gpt--oss--120b%20via%20Groq-f59e0b)](#-method)
@@ -197,10 +198,16 @@ Related work: the main **VEAM** platform (ESP32 + PZEM-004T sensing, React dashb
 
 Dataset: **DSUAL**, University of Almería. Please cite the original dataset authors when reusing the data.
 
-### Author
+### Authors
 
-**Oussama Benzaara**, Master 2 student, Industrial Electrotechnics, University of Souk Ahras.
-GitHub: [@viqelt](https://github.com/viqelt)
+- **Oussama Benzaara**, Master 2 student, Industrial Electrotechnics, University of Souk Ahras. GitHub: [@viqelt](https://github.com/viqelt)
+- **Amina Touati**, co-developer of the VEAM project.
+
+---
+
+## 📄 License
+
+Released under the [MIT License](LICENSE). The DSUAL dataset remains the property of its original authors and is subject to their terms.
 
 ---
 
