@@ -1004,9 +1004,9 @@ footer {
   <div class="tagline">NILM · Random Forest vs Groq AI · DSUAL Dataset</div>
   <div class="pill-row">
     <span class="pill pill-g">Random Forest</span>
-    <span class="pill pill-v">Groq AI · LLaMA 3.3</span>
+    <span class="pill pill-v">Groq AI · GPT OSS 120B</span>
     <span class="pill pill-c">DSUAL · Almeria</span>
-    <span class="pill pill-a">PFE · Souk Ahras 2026</span>
+    <span class="pill pill-a">PFE · Souk Ahras 2027</span>
   </div>
 </header>
 
@@ -1023,7 +1023,7 @@ footer {
   <div class="versus-side right">
     <div class="versus-label">Method B</div>
     <div class="versus-name" style="color:var(--violet);">Groq AI</div>
-    <div class="versus-desc">LLaMA 3.3 70B · Zero-shot · API</div>
+    <div class="versus-desc">GPT OSS 120B · Zero-shot · API</div>
   </div>
 </div>
 
@@ -1133,7 +1133,7 @@ footer {
     <div class="card-icon" style="background:var(--violet-dim);">🤖</div>
     <div class="card-meta">
       <div class="card-title">Groq AI Classification</div>
-      <div class="card-sub">LLaMA 3.3 70B · Zero-shot · Analyzes test set statistics</div>
+      <div class="card-sub">GPT OSS 120B· Zero-shot · Analyzes test set statistics</div>
     </div>
     <span class="step-tag pill-v">STEP 2</span>
   </div>
@@ -1182,7 +1182,7 @@ footer {
     <div class="card-icon" style="background:var(--amber-dim);">📋</div>
     <div class="card-meta">
       <div class="card-title">RF vs Groq AI — Objective Evaluation</div>
-      <div class="card-sub">Université de Souk Ahras · Master Electrotechnique Industrielle · PFE 2025–2026</div>
+      <div class="card-sub">Université de Souk Ahras · Master Electrotechnique Industrielle · PFE 2026–2027</div>
     </div>
   </div>
   <div class="card-body">
@@ -1300,7 +1300,7 @@ footer {
 
 <!-- FOOTER -->
 <footer>
-  VEAM · Projet de Fin d'Études · Master Électrotechnique Industrielle · Université de Souk Ahras · 2025–2026
+  VEAM · Projet de Fin d'Études · Master Électrotechnique Industrielle · Université de Souk Ahras · 2026–2027
 </footer>
 
 </div><!-- wrap -->
@@ -1626,7 +1626,7 @@ async function runGroqAI() {
   const btn = document.getElementById('groqBtn');
   btn.disabled = true;
   btn.innerHTML = '<span class="spin"></span> Asking Groq AI...';
-  setLog('Building a balanced sample and sending individual readings to Groq AI (LLaMA 3.3 70B)...', 'inf', 'groqLog');
+  setLog('Building a balanced sample and sending individual readings to Groq AI (GPT OSS 120B)...', 'inf', 'groqLog');
   document.getElementById('groqResults').innerHTML = '';
 
   const PER_CLASS = 24; // 5 appliances x 24 = 120 total — keeps request well under Groq's 8000 TPM cap
